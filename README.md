@@ -24,8 +24,8 @@ triggers. Once you've pushed through, the throttle behaves exactly as vanilla
 until you move away from that end again. Both hold times are configurable
 (0 to 2000 ms) and each detent can be disabled.
 
-The mod only touches the local player's relative-throttle input on the 13
-supported aircraft (listed in
+The mod only touches the local player's relative-throttle input. It
+recognizes 13 aircraft and activates detents on 8 (listed in
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
 afterburner on by itself. Absolute/HOTAS throttle mode, helicopters,
 unknown aircraft, AI, and remote aircraft are untouched, as are weapons and

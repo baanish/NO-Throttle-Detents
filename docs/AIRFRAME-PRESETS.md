@@ -1,6 +1,8 @@
 # Airframe presets
 
 The mod uses an explicit allowlist keyed by the installed build's `UnitDefinition.jsonKey`.
+It recognizes the 13 IDs below; 8 of them have an airbrake or afterburner capability, so
+detents activate only on those.
 The preset is selected only after the local `Unit.definition` and its `jsonKey` are resolved.
 Unknown, missing, or newly released IDs stay completely vanilla until a reviewed preset is added.
 
