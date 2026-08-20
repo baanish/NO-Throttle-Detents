@@ -9,7 +9,7 @@ controls. Collective aircraft, absolute/HOTAS mode, unknown aircraft, and
 aircraft without a matching system remain vanilla.
 
 NOMM manages installation, updates, enabling, disabling, and removal. BepInEx
-creates com.aanish.nuclearoption.detents.cfg on first launch. Debug logging is
+creates com.baanish.nuclearoption.detents.cfg on first launch. Debug logging is
 off by default. BepInEx Configuration Manager is optional.
 
 Other mods that rewrite throttle, airbrake, afterburner, or autopilot behavior

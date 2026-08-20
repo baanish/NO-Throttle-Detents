@@ -9,7 +9,7 @@ namespace NuclearOptionDetents.Patches;
 
 internal sealed class PatchInstaller
 {
-    private const string HarmonyId = "com.aanish.nuclearoption.detents";
+    private const string HarmonyId = "com.baanish.nuclearoption.detents";
     private readonly Harmony _harmony = new(HarmonyId);
     private readonly ManualLogSource _log;
 

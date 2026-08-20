@@ -2,7 +2,7 @@
 
 ## 0.1.0
 
-- Initial prototype. Recorded testing covered identity and readiness across all 13 selectable airframes; FS-12, FS-20, KR-67, and AB-4 also passed reduced-dwell upper and lower control-path checks. The release runtime received a manual flight check on the installed build before an author-metadata-only rebuild.
+- Initial prototype. Recorded testing covered identity and readiness across all 13 selectable airframes; FS-12, FS-20, KR-67, and AB-4 also passed reduced-dwell upper and lower control-path checks. The release runtime received a manual flight check before its author and plugin identity were corrected; detent logic did not change.
 - Adds configurable 200 ms relative-throttle detents for automatic airbrake and afterburner changeovers.
 - Pins compatibility to the 13 selectable airframes captured from the installed game; unknown aircraft remain vanilla until explicitly added.
 - Handles component and split-surface airbrakes, and filters only an existing vanilla afterburner decision.

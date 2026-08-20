@@ -43,7 +43,7 @@ installation. This release supports BepInEx 5; BepInEx 6 will not load it.
 The mod config is:
 
 ```text
-BepInEx\config\com.aanish.nuclearoption.detents.cfg
+BepInEx\config\com.baanish.nuclearoption.detents.cfg
 ```
 
 The standalone ZIP includes the default file. The plugin-only ZIP omits it;
@@ -110,7 +110,8 @@ should remain vanilla.
 and flight history. Recorded v0.1 testing covered identity and readiness on all
 13 allowlisted airframes plus reduced-dwell upper/lower control-path checks on
 FS-12, FS-20, KR-67, and AB-4. The v0.1.0 runtime also received a manual flight
-check on the installed build before an author-metadata-only rebuild.
+check before its author and plugin identity were corrected; detent logic did
+not change.
 
 ## Build from source
 

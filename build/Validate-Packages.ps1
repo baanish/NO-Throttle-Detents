@@ -42,7 +42,7 @@ function Assert-Package([string]$Path, [ValidateSet('Nomm','PluginOnly','Standal
             }
         }
         elseif ($Kind -eq 'PluginOnly') {
-            if ($names -contains 'BepInEx/config/com.aanish.nuclearoption.detents.cfg' -or
+            if ($names -contains 'BepInEx/config/com.baanish.nuclearoption.detents.cfg' -or
                 @($names | Where-Object { $_ -like 'BepInEx/core/*' -or $_ -in 'winhttp.dll','doorstop_config.ini','.doorstop_version' }).Count) {
                 throw 'Plugin-only package contains standalone files.'
             }
@@ -50,11 +50,11 @@ function Assert-Package([string]$Path, [ValidateSet('Nomm','PluginOnly','Standal
         else {
             foreach ($required in '.doorstop_version','doorstop_config.ini','winhttp.dll','README-FIRST.txt',
                                   'BepInEx/core/BepInEx.dll','BepInEx/config/BepInEx.cfg',
-                                  'BepInEx/config/com.aanish.nuclearoption.detents.cfg',
+                                  'BepInEx/config/com.baanish.nuclearoption.detents.cfg',
                                   'licenses/BepInEx-LGPL-2.1.txt','licenses/BepInEx-MIT.txt','THIRD_PARTY_NOTICES.md') {
                 if ($names -notcontains $required) { throw "Standalone package is missing '$required'." }
             }
-            $config = Read-Entry $archive 'BepInEx/config/com.aanish.nuclearoption.detents.cfg'
+            $config = Read-Entry $archive 'BepInEx/config/com.baanish.nuclearoption.detents.cfg'
             if ($config -notmatch '(?m)^\s*DebugLogging\s*=\s*false\s*(?:;.*)?$') {
                 throw 'Standalone detents config must keep DebugLogging=false.'
             }

@@ -9,7 +9,7 @@ namespace NuclearOptionDetents;
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 public sealed class Plugin : BaseUnityPlugin
 {
-    public const string PluginGuid = "com.aanish.nuclearoption.detents";
+    public const string PluginGuid = "com.baanish.nuclearoption.detents";
     public const string PluginName = "Nuclear Option Detents";
     public const string PluginVersion = "0.1.0";
 

@@ -35,7 +35,7 @@ function Add-Plugin([string]$Destination, [bool]$Config) {
     if ($Config) {
         $configDir = Join-Path $Destination 'BepInEx\config'
         New-Item -ItemType Directory -Force -Path $configDir | Out-Null
-        Copy-Item (Join-Path $root 'packaging\com.aanish.nuclearoption.detents.cfg') $configDir
+        Copy-Item (Join-Path $root 'packaging\com.baanish.nuclearoption.detents.cfg') $configDir
     }
     Copy-Item $PluginDll (Join-Path $pluginDir 'NuclearOptionDetents.dll')
     Copy-Versioned (Join-Path $root 'packaging\PLUGIN-README.txt') (Join-Path $pluginDir 'README.txt')
