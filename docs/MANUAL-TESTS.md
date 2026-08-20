@@ -34,6 +34,7 @@ an older DLL result is not evidence for a later DLL.
 - Exact DLL SHA-256: `E7AFD87AC3224672906540A50147C74B248D90BFD239F79F5138ABDA57121E6C`.
 - The exact Release DLL was installed for a final manual check and the user reported it working. No per-airframe result was recorded, so this does not expand the completed matrix above.
 - The game was closed and the temporary plugin directory and generated config were removed after the check.
+- The published package DLL SHA-256 is `388F96835AB5F5CF1C13BD4217D7AA2AEF9D4F9AA9661519C421EF0F1B1FD25C`. It was rebuilt from the same runtime source after changing only author and copyright metadata; that metadata-only DLL was not re-flown.
 
 ## Airframe preset capture - complete
 

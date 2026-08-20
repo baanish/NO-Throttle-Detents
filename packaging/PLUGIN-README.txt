@@ -7,8 +7,8 @@ This plugin adds 200 ms virtual detents at idle and each aircraft's captured
 full-dry/afterburner boundary. The input must remain held for the entire dwell;
 releasing early resets the hold. Recorded v0.1 testing covered identity and
 readiness on all 13 allowlisted airframes plus reduced-dwell upper/lower
-control-path checks on FS-12, FS-20, KR-67, and AB-4. The packaged DLL
-received a manual flight check on the installed build.
+control-path checks on FS-12, FS-20, KR-67, and AB-4. The runtime received a
+manual flight check before an author-metadata-only rebuild.
 
 Install by extracting the ZIP contents into the folder containing
 NuclearOption.exe. This plugin-only package requires an existing BepInEx 5

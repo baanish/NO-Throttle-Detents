@@ -7,8 +7,8 @@
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <FileVersion>0.1.0.0</FileVersion>
     <Description>Virtual controller throttle detents for Nuclear Option.</Description>
-    <Authors>Aanish</Authors>
-    <Copyright>Copyright (c) 2026 Aanish</Copyright>
+    <Authors>baanish</Authors>
+    <Copyright>Copyright (c) 2026 baanish</Copyright>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <!-- Assembly-CSharp transitively references the game's newer compression facade.

@@ -6,9 +6,9 @@ or this mod.
 This is the standalone fresh-install package. It includes BepInEx 5.4.23.5.
 This is the v@VERSION@ release package. Recorded v0.1 testing covered identity
 and readiness on all 13 allowlisted airframes plus reduced-dwell upper/lower
-control-path checks on FS-12, FS-20, KR-67, and AB-4. The packaged DLL received
-a manual flight check on the installed build. The packaged default has
-DebugLogging off.
+control-path checks on FS-12, FS-20, KR-67, and AB-4. The runtime received a
+manual flight check before an author-metadata-only rebuild. The packaged
+default has DebugLogging off.
 
 INSTALL
 
