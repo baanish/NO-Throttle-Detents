@@ -18,8 +18,8 @@ add infrastructure to make a prototype look production-ready.
 2. Run `pwsh ./build/Build.ps1` for the focused tests, Release build, and
    package validation. Pass `-GameDir 'C:\path\to\Nuclear Option'` when the
    game is not discoverable, or set `NUCLEAR_OPTION_DIR` for the same override.
-3. Use `docs/MANUAL-TESTS.md` for real flight checks. Record the exact DLL,
-   game build, aircraft, frame-rate cap, and result.
+3. Flight-test behavior changes in the installed game. Record what was tested,
+   with the game build and aircraft, in the release's changelog entry.
 4. Use `docs/NOMM-RELEASE.md` only when preparing a public NOMM submission.
 
 ## Invariants
@@ -40,8 +40,8 @@ add infrastructure to make a prototype look production-ready.
   capture/test record.
 - Harmony or field compatibility: read `docs/COMPATIBILITY.md` and run the
   focused build/tests after changing a target.
-- Behavior or performance change: read `docs/DESIGN.md` and run focused tests
-  plus the relevant sections of `docs/MANUAL-TESTS.md`.
+- Behavior or performance change: read `docs/DESIGN.md`, run focused tests,
+  and flight-check the affected behavior in game.
 - Packaging or NOMM distribution: read `docs/NOMM-RELEASE.md`; treat the
   build/package scripts as the source of truth for archive contents.
 

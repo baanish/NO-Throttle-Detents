@@ -24,6 +24,8 @@ This is a v0.1 prototype. The current allowlist and installed-build notes are
 in [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md) and
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
+![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.jpg)
+
 ## Install
 
 Download the plugin-only, standalone, or NOMM ZIP from the
@@ -108,10 +110,9 @@ development. It is contributor reference, not a promise that future game
 builds will work. After a game update, run the mod and the focused core tests;
 those tests do not exercise Harmony installation or live-game integration.
 
-[docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md) holds the flight-test checklist
-and history. Recorded v0.1 testing covered identity and readiness on all 13
-allowlisted airframes plus reduced-dwell upper/lower control-path checks on
-FS-12, FS-20, KR-67, and AB-4.
+Recorded v0.1 testing covered identity and readiness on all 13 allowlisted
+airframes plus reduced-dwell upper/lower control-path checks on FS-12, FS-20,
+KR-67, and AB-4.
 
 ## Build from source
 

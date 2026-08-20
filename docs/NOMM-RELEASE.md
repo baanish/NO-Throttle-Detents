@@ -8,8 +8,8 @@ this repository or release archive does not create a catalog listing.
 1. Run `pwsh ./build/Build.ps1` and keep the resulting `-nomm.zip` as the
    catalog artifact. Use `-GameDir` or `NUCLEAR_OPTION_DIR` when discovery does
    not find the game.
-2. Run the relevant checks in [MANUAL-TESTS.md](MANUAL-TESTS.md) on the exact
-   DLL you intend to distribute and record the results there.
+2. Flight-test the exact DLL you intend to distribute and record what was
+   tested in the changelog entry.
 3. Confirm the generated package uses the version from the project file and
    that the default config keeps `DebugLogging = false`.
 4. Make the source repository public. NOMNOM rejects DLL mods without public,
@@ -33,9 +33,9 @@ manual BepInEx installs and the standalone artifact for users without BepInEx.
 ## Listing notes
 
 Describe the mod as a client-local relative-throttle detent prototype. State
-the tested game build and aircraft. Cite only manual records from
-[MANUAL-TESTS.md](MANUAL-TESTS.md) as flight evidence; the compatibility
-snapshot, package validation, and source tests are not.
+the tested game build and aircraft. Cite only recorded manual flights as
+evidence; the compatibility snapshot, package validation, and source tests
+are not.
 
 The manifest ID is `NuclearOptionDetents`, matching the assembly name. Mark it
 as `Client`, `plugin`, and game version `0.34.2`. Configuration Manager is
