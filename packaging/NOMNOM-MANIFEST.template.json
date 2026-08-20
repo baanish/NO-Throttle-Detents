@@ -1,0 +1,33 @@
+{
+  "id": "NuclearOptionDetents",
+  "displayName": "Nuclear Option Detents",
+  "description": "Adds configurable hold detents at idle airbrake and full-dry/afterburner changeovers for supported aircraft using relative throttle controls.",
+  "tags": [
+    "QoL",
+    "Gameplay"
+  ],
+  "urls": [
+    {
+      "name": "info",
+      "url": "https://github.com/baanish/NO-Throttle-Detents"
+    }
+  ],
+  "authors": [
+    "Aanish"
+  ],
+  "isClientOrServer": "Client",
+  "githubOwner": "baanish",
+  "githubRepoName": "NO-Throttle-Detents",
+  "autoUpdateArtifacts": "True",
+  "artifacts": [
+    {
+      "fileName": "NuclearOptionDetents-v@VERSION@-nomm.zip",
+      "version": "@VERSION@",
+      "category": "release",
+      "type": "plugin",
+      "gameVersion": "0.34.2",
+      "downloadUrl": "https://github.com/baanish/NO-Throttle-Detents/releases/download/v@VERSION@/NuclearOptionDetents-v@VERSION@-nomm.zip",
+      "hash": "sha256:@SHA256@"
+    }
+  ]
+}

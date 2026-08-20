@@ -27,6 +27,25 @@ bld/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+.dotnet/
+.cache/
+.agents/
+.video-inspect/
+dist/*.zip
+dist/SHA256SUMS.txt
+dist/compatibility.json
+dist/NuclearOptionDetents.nomnom.json
+
+# Game, loader, and local install files
+*.dll
+*.cfg
+!packaging/*.cfg
+BepInEx/
+NuclearOption_Data/
+LogOutput.log
+winhttp.dll
+doorstop_config.ini
+.doorstop_version
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt

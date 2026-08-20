@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\EndpointDetent.cs" Link="Core\EndpointDetent.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentRuntime.cs" Link="Core\DetentRuntime.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleCommand.cs" Link="Core\ThrottleCommand.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ComponentGatePolicy.cs" Link="Core\ComponentGatePolicy.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleBoundaryHold.cs" Link="Core\ThrottleBoundaryHold.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\RuntimeReadiness.cs" Link="Core\RuntimeReadiness.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\AirframePreset.cs" Link="Core\AirframePreset.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ReferenceOwnership.cs" Link="Core\ReferenceOwnership.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\AirbrakeCapabilityPaths.cs" Link="Core\AirbrakeCapabilityPaths.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentTiming.cs" Link="Core\DetentTiming.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Config\EffectiveSettings.cs" Link="Config\EffectiveSettings.cs" />
+  </ItemGroup>
+</Project>

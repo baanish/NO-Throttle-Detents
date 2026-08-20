@@ -1,2 +1,138 @@
-# NO-Throttle-Detents
+# Nuclear Option Detents
 
+Nuclear Option Detents is a small, client-side BepInEx 5 prototype for the
+Windows Steam version of Nuclear Option. It adds two optional detents to the
+existing relative throttle controls:
+
+- At idle, hold decrease for the configured dwell before the
+  automatic airbrake can open.
+- At the aircraft's captured full-dry/afterburner boundary, hold increase for
+  the configured dwell before afterburner is allowed.
+
+Multiplayer use is unverified, and hosts or server moderators may prohibit
+BepInEx or this mod.
+
+The command must remain active for the entire dwell. Releasing early resets
+that endpoint's hold. The mod never forces afterburner on, and it leaves
+absolute/HOTAS throttle mode, collective aircraft, unknown aircraft, and
+unsupported systems vanilla. Harmony hooks run process-wide, then an exact
+local-aircraft identity check decides whether a gate applies. The mod only
+gates the local pilot's existing airbrake and afterburner decisions; it does not
+touch weapons, networking, or remote aircraft state.
+
+This is a v0.1 starting point, not a finished product. The code and presets are
+intentionally easy to inspect, change, or discard. The current allowlist and
+installed-build notes are in [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)
+and [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
+## Install
+
+For an existing BepInEx installation, extract the plugin-only ZIP into the
+folder containing `NuclearOption.exe` and merge its `BepInEx` folder. The
+plugin is installed at:
+
+```text
+BepInEx\plugins\NuclearOptionDetents\NuclearOptionDetents.dll
+```
+
+For a fresh install, extract the standalone ZIP directly beside
+`NuclearOption.exe`. It includes BepInEx and the mod's default config. Do not
+add an extra wrapper directory or extract it over an existing BepInEx
+installation. This release supports BepInEx 5; BepInEx 6 will not load it.
+
+The mod config is:
+
+```text
+BepInEx\config\com.aanish.nuclearoption.detents.cfg
+```
+
+The standalone ZIP includes the default file. The plugin-only ZIP omits it;
+BepInEx creates it on first launch and preserves existing settings.
+
+Nuclear Option Mod Manager uses the separate flat `-nomm.zip` artifact. Do not
+manually extract that archive into the game directory. NOMM installs it inside
+its managed plugin directory and supplies BepInEx.
+
+To remove or disable only this mod, delete its plugin directory or rename the
+DLL. Leave unrelated BepInEx and game files alone.
+
+## Configuration
+
+The default config is:
+
+```ini
+[General]
+Enabled = true
+DebugLogging = false
+
+[Status]
+RuntimeStatus = Open the in-game Configuration Manager to see the live check.
+
+[Idle / Airbrake Detent]
+Enabled = true
+HoldMilliseconds = 200
+
+[Full Dry / Afterburner Detent]
+Enabled = true
+HoldMilliseconds = 200
+
+[Advanced]
+CommandThreshold = 0.5
+EndpointEpsilon = 0.001
+ResetHysteresis = 0.02
+```
+
+Each detent has its own switch and dwell from 0 to 2000 ms. A zero dwell
+unlocks on the first qualifying endpoint update. `CommandThreshold` is the
+raw input magnitude required to hold; `1.0` requires full-scale input.
+`EndpointEpsilon` tolerates float noise; `ResetHysteresis` controls how far the
+throttle must move away before an unlocked detent relocks and is always at
+least the endpoint tolerance. `DebugLogging` is off by default and is useful
+when diagnosing a local install.
+
+The mod does not require Configuration Manager. Text-file changes apply on
+the next launch.
+
+Other mods that rewrite throttle, airbrake, afterburner, or autopilot behavior
+may conflict with these patches. Test them together before relying on either.
+
+## Compatibility and testing
+
+The installed-build snapshot in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)
+records the game version, selected patch points, and fields inspected during
+development. It is reference material for contributors, not a promise that
+every future game build will work. A changed game build should be checked by
+running the mod and the focused core executable tests. These tests do not
+exercise Harmony installation or live-game integration. Unsupported paths
+should remain vanilla.
+
+[docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md) preserves the existing inspection
+and flight history. Recorded v0.1 testing covered identity and readiness on all
+13 allowlisted airframes plus reduced-dwell upper/lower control-path checks on
+FS-12, FS-20, KR-67, and AB-4. The final v0.1.0 DLL also received a manual
+flight check on the installed build.
+
+## Build from source
+
+From PowerShell 7, run the one-command build:
+
+```powershell
+pwsh ./build/Build.ps1
+```
+
+The script runs the focused core executable tests, builds the Release plugin,
+creates the NOMM, manual plugin-only, and standalone ZIP layouts, and validates
+their contents. It finds Nuclear
+Option through Steam locations when possible. To select it explicitly, pass a
+directory or set the environment variable:
+
+```powershell
+pwsh ./build/Build.ps1 -GameDir 'C:\Games\Nuclear Option'
+$env:NUCLEAR_OPTION_DIR = 'C:\Games\Nuclear Option'
+pwsh ./build/Build.ps1
+```
+
+Artifacts are written to `dist`. The source is MIT licensed; see
+`THIRD_PARTY_NOTICES.md` for bundled dependency attribution.
+
+For a NOMM submission, use [docs/NOMM-RELEASE.md](docs/NOMM-RELEASE.md).
