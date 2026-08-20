@@ -135,5 +135,3 @@ pwsh ./build/Build.ps1
 
 Artifacts are written to `dist`. The source is MIT licensed; see
 `THIRD_PARTY_NOTICES.md` for bundled dependency attribution.
-
-For a NOMM submission, use [docs/NOMM-RELEASE.md](docs/NOMM-RELEASE.md).

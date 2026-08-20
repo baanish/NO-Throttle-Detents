@@ -20,7 +20,10 @@ add infrastructure to make a prototype look production-ready.
    game is not discoverable, or set `NUCLEAR_OPTION_DIR` for the same override.
 3. Flight-test behavior changes in the installed game. Record what was tested,
    with the game build and aircraft, in the release's changelog entry.
-4. Use `docs/NOMM-RELEASE.md` only when preparing a public NOMM submission.
+4. For a NOMM listing, submit `dist/NuclearOptionDetents.nomnom.json` as
+   `modManifests/NuclearOptionDetents.json` in a PR to `KopterBuzz/NOMNOM`
+   (`main`), after the GitHub release is published and with the manifest's
+   download URL and SHA-256 matching the released `-nomm.zip` asset.
 
 ## Invariants
 
@@ -42,8 +45,9 @@ add infrastructure to make a prototype look production-ready.
   focused build/tests after changing a target.
 - Behavior or performance change: read `docs/DESIGN.md`, run focused tests,
   and flight-check the affected behavior in game.
-- Packaging or NOMM distribution: read `docs/NOMM-RELEASE.md`; treat the
-  build/package scripts as the source of truth for archive contents.
+- Packaging or NOMM distribution: the build/package scripts and
+  `packaging/NOMNOM-MANIFEST.template.json` are the source of truth for
+  archive contents and listing metadata.
 
 Keep documentation concise. Do not duplicate values that can be read directly
 from project files or build output.
