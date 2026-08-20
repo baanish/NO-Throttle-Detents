@@ -54,9 +54,9 @@ its preset.
 
 The patch installer resolves the small set of methods and fields needed by the
 current game build. If a target or field is unavailable, that feature reports
-unavailable and leaves its vanilla path unchanged. The installed
-build snapshot in [COMPATIBILITY.md](COMPATIBILITY.md) is inspection reference
-for contributors, not a runtime version gate or a claim of future compatibility.
+unavailable and leaves its vanilla path unchanged. The installed-build
+snapshot in [COMPATIBILITY.md](COMPATIBILITY.md) records the inspected patch
+points; it is not a runtime version gate.
 
 Debug logging is off by default. When enabled, it records aircraft attachment
 and lifecycle resets. Patch and runtime failures are logged once per operation.
@@ -67,5 +67,4 @@ file writes; BepInEx owns config and log writes.
 
 Presets are keyed by `UnitDefinition.jsonKey`. Add or change an airframe only
 after recording the installed component shape in [AIRFRAME-PRESETS.md](AIRFRAME-PRESETS.md)
-and adding focused tests. Keep new behavior local and easy to remove: v0.1 is
-a starting point for future features, simplification, or replacement.
+and adding focused tests. Keep new behavior local and easy to remove.

@@ -20,20 +20,18 @@ Unknown, missing, or newly released IDs stay completely vanilla until a reviewed
 | `FastBomber1` | Alkyon AB-4 | no | split (capture `maxSplit=60`) | yes (`0.900000..1.000000`, 4 nozzles) |
 | `trainer` | T/A-30 Compass | no | Airbrake component | no |
 
-The table values came from live aircraft instances loaded into a mission. The
-capture read `UnitDefinition.jsonKey`, collective mode, local `Airbrake`
-components, `ControlSurface.maxSplit` for split airbrakes, and the afterburner
-range on each local `JetNozzle`. The preset pins the captured airbrake path
-(component or split) and afterburner range/nozzle count; it does not pin an
-exact split-surface name or `maxSplit` value. The parenthetical `maxSplit`
-values are capture notes only. A missing, extra, unreadable, or mismatched
-nozzle leaves the afterburner detent vanilla. AB-4 is intentionally pinned to
-four matching nozzles; one missing or mismatched engine leaves its upper detent
-vanilla. The captured afterburner ranges describe the aircraft's full-dry to
-afterburner boundary, not a user-visible 100% throttle value. These values
-document aircraft capabilities, not physical detent behavior.
+The table values came from live aircraft loaded into a mission:
+`UnitDefinition.jsonKey`, collective mode, local `Airbrake` components,
+`ControlSurface.maxSplit` for split airbrakes, and the afterburner range on
+each local `JetNozzle`.
 
-An expected capability is gated only after live confirmation. A preset marked
-`no`, a collective aircraft, or an unknown/new ID cannot be enabled by runtime
-discovery. The hidden UFO asset was not selectable or captured and is not
-allowlisted.
+A preset pins the airbrake path (component or split) and the afterburner range
+and nozzle count. It does not pin a split-surface name or `maxSplit` value; the
+parenthetical `maxSplit` figures are capture notes. A missing, extra,
+unreadable, or mismatched nozzle leaves the afterburner detent vanilla, and the
+AB-4 needs all four matching nozzles. The captured ranges describe the full-dry
+to afterburner boundary, not a user-visible 100% throttle value. The table
+documents aircraft capabilities, not physical detent behavior.
+
+Allowlist a capability only after live confirmation. Runtime discovery cannot
+enable a preset marked `no`, a collective aircraft, or an unknown ID.

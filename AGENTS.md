@@ -7,9 +7,9 @@ detents. Keep the runtime local: it may gate the local pilot's existing
 airbrake and afterburner decisions, but it must not patch remote aircraft,
 weapons, network transport, or server logic.
 
-This is a flexible v0.1 starting point. Prefer small, readable changes that a
-future contributor can remove, replace, or extend. Keep the behavior obvious;
-do not add infrastructure merely to make a prototype look production-ready.
+This is a v0.1 prototype. Prefer small, readable changes that a future
+contributor can remove, replace, or extend. Keep the behavior obvious; do not
+add infrastructure to make a prototype look production-ready.
 
 ## Workflow
 
@@ -19,8 +19,7 @@ do not add infrastructure merely to make a prototype look production-ready.
    package validation. Pass `-GameDir 'C:\path\to\Nuclear Option'` when the
    game is not discoverable, or set `NUCLEAR_OPTION_DIR` for the same override.
 3. Use `docs/MANUAL-TESTS.md` for real flight checks. Record the exact DLL,
-   game build, aircraft, frame-rate cap, and result; code inspection is not
-   in-game evidence.
+   game build, aircraft, frame-rate cap, and result.
 4. Use `docs/NOMM-RELEASE.md` only when preparing a public NOMM submission.
 
 ## Invariants

@@ -20,12 +20,16 @@ local-aircraft identity check decides whether a gate applies. The mod only
 gates the local pilot's existing airbrake and afterburner decisions; it does not
 touch weapons, networking, or remote aircraft state.
 
-This is a v0.1 starting point, not a finished product. The code and presets are
-intentionally easy to inspect, change, or discard. The current allowlist and
-installed-build notes are in [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)
-and [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+This is a v0.1 prototype. The current allowlist and installed-build notes are
+in [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md) and
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Install
+
+Download the plugin-only, standalone, or NOMM ZIP from the
+[releases page](https://github.com/baanish/NO-Throttle-Detents/releases).
+Each release includes a `SHA256SUMS.txt` for the archives. Building from
+source is optional; see the section below.
 
 For an existing BepInEx installation, extract the plugin-only ZIP into the
 folder containing `NuclearOption.exe` and merge its `BepInEx` folder. The
@@ -99,19 +103,15 @@ may conflict with these patches. Test them together before relying on either.
 ## Compatibility and testing
 
 The installed-build snapshot in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)
-records the game version, selected patch points, and fields inspected during
-development. It is reference material for contributors, not a promise that
-every future game build will work. A changed game build should be checked by
-running the mod and the focused core executable tests. These tests do not
-exercise Harmony installation or live-game integration. Unsupported paths
-should remain vanilla.
+records the game version, patch points, and fields inspected during
+development. It is contributor reference, not a promise that future game
+builds will work. After a game update, run the mod and the focused core tests;
+those tests do not exercise Harmony installation or live-game integration.
 
-[docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md) preserves the existing inspection
-and flight history. Recorded v0.1 testing covered identity and readiness on all
-13 allowlisted airframes plus reduced-dwell upper/lower control-path checks on
-FS-12, FS-20, KR-67, and AB-4. The v0.1.0 runtime also received a manual flight
-check before its author and plugin identity were corrected; detent logic did
-not change.
+[docs/MANUAL-TESTS.md](docs/MANUAL-TESTS.md) holds the flight-test checklist
+and history. Recorded v0.1 testing covered identity and readiness on all 13
+allowlisted airframes plus reduced-dwell upper/lower control-path checks on
+FS-12, FS-20, KR-67, and AB-4.
 
 ## Build from source
 
@@ -123,9 +123,8 @@ pwsh ./build/Build.ps1
 
 The script runs the focused core executable tests, builds the Release plugin,
 creates the NOMM, manual plugin-only, and standalone ZIP layouts, and validates
-their contents. It finds Nuclear
-Option through Steam locations when possible. To select it explicitly, pass a
-directory or set the environment variable:
+their contents. It finds Nuclear Option through Steam locations when possible.
+To select it explicitly, pass a directory or set the environment variable:
 
 ```powershell
 pwsh ./build/Build.ps1 -GameDir 'C:\Games\Nuclear Option'
