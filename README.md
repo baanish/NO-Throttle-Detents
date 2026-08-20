@@ -6,17 +6,18 @@ by accident.
 
 With relative throttle controls (the default keyboard throttle), the ends of
 the throttle range are also switches: reaching 0% opens the automatic
-airbrake, and pushing past full dry thrust engages the afterburner. One tap
-too many and you've deployed the airbrake on final or lit the burner while
-trying to hold full military power.
+airbrake, and pushing past full dry thrust engages the afterburner. The
+throttle slides while the key is held, so releasing a millisecond too late
+deploys the airbrake on final or lights the burner when you wanted full
+military power.
 
 This mod adds a detent at each end, like the physical stop on a real HOTAS
-throttle that you push through deliberately:
+throttle. The throttle catches at the boundary instead of sliding straight
+through, giving you a window to release the key:
 
-- The throttle now stops just above 0%. Keep holding decrease for 200 ms to
-  push through to true idle and let the automatic airbrake open.
-- The throttle now stops at full dry thrust. Keep holding increase for 200 ms
-  to push through into afterburner.
+- Just above 0%: keep holding decrease for 200 ms to reach true idle and let
+  the automatic airbrake open.
+- At full dry thrust: keep holding increase for 200 ms to enter afterburner.
 
 Release the key early and the throttle just stays at the stop; nothing
 triggers. Once you've pushed through, the throttle behaves exactly as vanilla
