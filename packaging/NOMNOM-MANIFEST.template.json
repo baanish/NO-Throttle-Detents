@@ -1,7 +1,7 @@
 {
   "id": "NuclearOptionDetents",
   "displayName": "Nuclear Option Detents",
-  "description": "Adds configurable hold detents at idle airbrake and full-dry/afterburner changeovers for supported aircraft using relative throttle controls.",
+  "description": "Adds throttle detents for relative throttle controls: the throttle pauses just above 0% and at full dry thrust, and you hold the key briefly to push through, so you never open the airbrake or light the afterburner by accident.",
   "tags": [
     "QoL",
     "Gameplay"

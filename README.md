@@ -1,27 +1,37 @@
 # Nuclear Option Detents
 
-Nuclear Option Detents is a small, client-side BepInEx 5 prototype for the
-Windows Steam version of Nuclear Option. It adds two optional detents to the
-existing relative throttle controls:
+A small client-side BepInEx 5 mod for the Windows Steam version of Nuclear
+Option that stops you from opening the airbrake or lighting the afterburner
+by accident.
 
-- At idle, hold decrease for the configured dwell before the
-  automatic airbrake can open.
-- At the aircraft's captured full-dry/afterburner boundary, hold increase for
-  the configured dwell before afterburner is allowed.
+With relative throttle controls (the default keyboard throttle), the ends of
+the throttle range are also switches: reaching 0% opens the automatic
+airbrake, and pushing past full dry thrust engages the afterburner. One tap
+too many and you've deployed the airbrake on final or lit the burner while
+trying to hold full military power.
 
-Multiplayer use is unverified, and hosts or server moderators may prohibit
-BepInEx or this mod.
+This mod adds a detent at each end, like the physical stop on a real HOTAS
+throttle that you push through deliberately:
 
-The command must remain active for the entire dwell. Releasing early resets
-that endpoint's hold. The mod never forces afterburner on, and it leaves
-absolute/HOTAS throttle mode, collective aircraft, unknown aircraft, and
-unsupported systems vanilla. Harmony hooks run process-wide, then an exact
-local-aircraft identity check decides whether a gate applies. The mod only
-gates the local pilot's existing airbrake and afterburner decisions; it does not
-touch weapons, networking, or remote aircraft state.
+- The throttle now stops just above 0%. Keep holding decrease for 200 ms to
+  push through to true idle and let the automatic airbrake open.
+- The throttle now stops at full dry thrust. Keep holding increase for 200 ms
+  to push through into afterburner.
 
-This is a v0.1 prototype. The current allowlist and installed-build notes are
-in [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md) and
+Release the key early and the throttle just stays at the stop; nothing
+triggers. Once you've pushed through, the throttle behaves exactly as vanilla
+until you move away from that end again. Both hold times are configurable
+(0 to 2000 ms) and each detent can be disabled.
+
+The mod only touches the local player's relative-throttle input on the 13
+supported aircraft (listed in
+[docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
+afterburner on by itself. Absolute/HOTAS throttle mode, helicopters,
+unknown aircraft, AI, and remote aircraft are untouched, as are weapons and
+networking. Multiplayer use is unverified, and hosts or server moderators may
+prohibit BepInEx or this mod.
+
+This is a v0.1 prototype. Installed-build notes for contributors are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.jpg)
