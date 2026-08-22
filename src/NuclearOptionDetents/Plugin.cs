@@ -3,6 +3,7 @@ using NuclearOptionDetents.Config;
 using NuclearOptionDetents.Core;
 using NuclearOptionDetents.Patches;
 using NuclearOptionDetents.UI;
+using System.Runtime.CompilerServices;
 using UnityEngine.SceneManagement;
 
 namespace NuclearOptionDetents;
@@ -22,13 +23,18 @@ public sealed class Plugin : BaseUnityPlugin
     {
         var modConfig = new ModConfig(Config);
         RuntimeController.Initialize(modConfig, Logger);
-        _hudIndicator = new DetentHudIndicator();
-        if (!_hudIndicator.IsAvailable)
-        {
-            Logger.LogWarning("HUD indicator unavailable: ThrottleGauge.throttleLabel was not found with the expected TextMeshProUGUI type.");
-        }
         _patchInstaller = new PatchInstaller(Logger);
         _patchInstaller.Install();
+        try
+        {
+            InitializeHudIndicator();
+        }
+        catch (System.Exception exception)
+        {
+            _hudIndicator = null;
+            _hudFailureLogged = true;
+            Logger.LogWarning($"HUD indicator unavailable: {exception.Message}");
+        }
         SceneManager.activeSceneChanged += HandleActiveSceneChanged;
 
         RuntimeController.SetPatchStatus(
@@ -40,6 +46,16 @@ public sealed class Plugin : BaseUnityPlugin
             $"{PluginName} {PluginVersion} loaded. " +
             $"Throttle={_patchInstaller.ThrottleObserver}; airbrake={_patchInstaller.AirbrakeComponentGate}; " +
             $"split airbrake={_patchInstaller.SplitAirbrakeGate}; afterburner={_patchInstaller.AfterburnerGate}.");
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void InitializeHudIndicator()
+    {
+        _hudIndicator = new DetentHudIndicator();
+        if (!_hudIndicator.IsAvailable)
+        {
+            Logger.LogWarning("HUD indicator unavailable: ThrottleGauge.throttleLabel was not found with the expected TextMeshProUGUI type.");
+        }
     }
 
     private void OnDestroy()

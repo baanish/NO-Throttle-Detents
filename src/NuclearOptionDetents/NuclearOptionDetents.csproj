@@ -60,6 +60,7 @@
   <Target Name="ValidateLocalReferences" BeforeTargets="ResolveReferences">
     <Error Condition="'$(GameDir)' == ''" Text="GameDir is required. Run build/Build.ps1 or pass /p:GameDir=&quot;...&quot;." />
     <Error Condition="!Exists('$(GameDir)\NuclearOption_Data\Managed\Assembly-CSharp.dll')" Text="Assembly-CSharp.dll was not found under GameDir '$(GameDir)'." />
+    <Error Condition="!Exists('$(GameDir)\NuclearOption_Data\Managed\Unity.TextMeshPro.dll')" Text="Unity.TextMeshPro.dll was not found under GameDir '$(GameDir)'." />
     <Error Condition="!Exists('$(BepInExRoot)\BepInEx\core\BepInEx.dll')" Text="Pinned BepInEx compile references were not found at '$(BepInExRoot)'. Run build/Build.ps1." />
   </Target>
 </Project>

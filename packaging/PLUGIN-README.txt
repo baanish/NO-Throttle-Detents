@@ -34,4 +34,4 @@ decide whether a gate applies. AB-4's upper detent requires all four
 captured afterburner nozzles.
 The sensitivity multiplier covers aircraft with a supported detent. Use
 PauelsRandomFixes for other aircraft; when active, it owns sensitivity.
-Other throttle or autopilot mods may conflict.
+Other throttle, airbrake, afterburner, or autopilot mods may conflict.

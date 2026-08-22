@@ -41,9 +41,11 @@ game.
 
 The sensitivity multiplier scales the game's relative-throttle step before the
 state machine sees it. `1x` preserves the observed vanilla value. The feature
-uses the same pass-through scope as the detents and yields rate control to
-PauelsRandomFixes while its `ThrottleRelativeVelocity` prefix is active; detent
-boundary holds still run after that prefix.
+is scoped by the preset's expected detent capability, independent of whether
+an individual detent is disabled or its live component check succeeds. It
+yields rate control to PauelsRandomFixes when its verified relative-throttle
+prefix replaces vanilla integration. Unknown throttle replacers remain vanilla
+because their private accumulator mapping is not known.
 
 The in-game indicator is derived from the canonical boundary-hold result. It
 clones the native throttle-label style below the flight HUD's throttle gauge.

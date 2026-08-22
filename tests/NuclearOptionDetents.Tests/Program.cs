@@ -85,13 +85,12 @@ internal static class Program
             ("disabled capability does not block readiness", DisabledCapabilityDoesNotBlockReadiness),
             ("low-frequency observer gap counts elapsed dwell", LowFrequencyObserverGapCountsElapsedDwell),
             ("explicit cancellation resets pending holds", ExplicitCancellationResetsPendingHolds),
-            ("observed signed throttle mapping wins over setting", ObservedSignedThrottleMappingWins),
-            ("observed zero throttle mapping wins over setting", ObservedZeroThrottleMappingWins),
-            ("ambiguous throttle mapping uses fallback", AmbiguousThrottleMappingUsesFallback),
-            ("sensitivity scales and clamps relative movement", SensitivityScalesAndClamps),
+            ("output mapping follows configured mode", OutputMappingFollowsConfiguredMode),
+            ("sensitivity scales observed vanilla movement", SensitivityScalesObservedVanillaMovement),
+            ("vanilla deadzone remains unchanged", VanillaDeadzoneRemainsUnchanged),
+            ("unexpected throttle write rebases sensitivity", UnexpectedThrottleWriteRebasesSensitivity),
             ("external integrator owns sensitivity", ExternalIntegratorOwnsSensitivity),
             ("non-detent aircraft bypass sensitivity", NonDetentAircraftBypassesSensitivity),
-            ("sub-threshold input still uses sensitivity", SubThresholdInputUsesSensitivity),
             ("indicator hides when boundary hold bypasses", IndicatorHidesWhenBoundaryHoldBypasses),
             ("indicator is hidden while bypassed", IndicatorHiddenWhileBypassed),
             ("indicator shows idle lock progress", IndicatorShowsIdleLockProgress),
@@ -521,7 +520,7 @@ internal static class Program
             0.91, 0.82, ThrottleCommand.Increase,
             EndpointDetentState.Locked, EndpointDetentState.Locked,
             0, 0.9, 0.001,
-            throttleUsesNegativeRange: true,
+            throttleRange: SimulatedThrottleRange.NegativeOneToOne,
             idleApplies: false));
         Near(0.799998, result.SimulatedThrottle);
     }
@@ -532,7 +531,7 @@ internal static class Program
             0.91, 0.91, ThrottleCommand.Increase,
             EndpointDetentState.Locked, EndpointDetentState.Locked,
             0, 0.9, 0.001,
-            throttleUsesNegativeRange: false,
+            throttleRange: SimulatedThrottleRange.ZeroToOne,
             idleApplies: false));
         Near(0.899999, result.SimulatedThrottle);
     }
@@ -691,42 +690,32 @@ internal static class Program
         True(snapshot.AfterburnerUnlocked);
     }
 
-    private static void ObservedSignedThrottleMappingWins()
+    private static void OutputMappingFollowsConfiguredMode()
     {
-        Equal(
-            SimulatedThrottleRange.NegativeOneToOne,
-            SimulatedThrottleMapping.Resolve(-1, 0, SimulatedThrottleRange.ZeroToOne));
+        Near(0, SimulatedThrottleMapping.ToPublic(-0.016, SimulatedThrottleRange.ZeroToOne));
+        Near(0.492, SimulatedThrottleMapping.ToPublic(-0.016, SimulatedThrottleRange.NegativeOneToOne));
+        Near(0, SimulatedThrottleMapping.ToSimulated(0, SimulatedThrottleRange.ZeroToOne));
         Near(-1, SimulatedThrottleMapping.ToSimulated(0, SimulatedThrottleRange.NegativeOneToOne));
     }
 
-    private static void ObservedZeroThrottleMappingWins()
+    private static void SensitivityScalesObservedVanillaMovement()
     {
-        Equal(
-            SimulatedThrottleRange.ZeroToOne,
-            SimulatedThrottleMapping.Resolve(0.25, 0.25, SimulatedThrottleRange.NegativeOneToOne));
-        Near(0.25, SimulatedThrottleMapping.ToPublic(0.25, SimulatedThrottleRange.ZeroToOne));
+        Near(-0.032, RelativeThrottleSensitivity.Apply(0, -0.016, -1, 0.016, 2, enabled: true));
+        Near(0.908, RelativeThrottleSensitivity.Apply(0.9, 0.916, 1, 0.016, 0.5, enabled: true));
+        Near(1, RelativeThrottleSensitivity.Apply(0.99, 1, 1, 0.016, 4, enabled: true));
+        Near(-1, RelativeThrottleSensitivity.Apply(-0.99, -1, -1, 0.016, 4, enabled: true));
+        Near(-0.016, RelativeThrottleSensitivity.Apply(0, -0.016, -1, 0.016, 1, enabled: true));
     }
 
-    private static void AmbiguousThrottleMappingUsesFallback()
+    private static void VanillaDeadzoneRemainsUnchanged()
     {
-        Equal(
-            SimulatedThrottleRange.NegativeOneToOne,
-            SimulatedThrottleMapping.Resolve(1, 1, SimulatedThrottleRange.NegativeOneToOne));
-        Equal(
-            SimulatedThrottleRange.ZeroToOne,
-            SimulatedThrottleMapping.Resolve(1, 1, SimulatedThrottleRange.ZeroToOne));
+        Near(0.4, RelativeThrottleSensitivity.Apply(0.4, 0.4, 0.04, 0.016, 4, enabled: true));
+        Near(0.4, RelativeThrottleSensitivity.Apply(0.4, 0.4, 0.1, 0.016, 4, enabled: true));
     }
 
-    private static void SensitivityScalesAndClamps()
+    private static void UnexpectedThrottleWriteRebasesSensitivity()
     {
-        Near(0.05, RelativeThrottleSensitivity.Apply(
-            0, 0.1, 0.1, 0.5, SimulatedThrottleRange.ZeroToOne, enabled: true));
-        Near(1, RelativeThrottleSensitivity.Apply(
-            0.9, 1, 0.1, 4, SimulatedThrottleRange.NegativeOneToOne, enabled: true));
-        Near(0.006, RelativeThrottleSensitivity.Apply(
-            0.01, 0, -0.016, 0.25, SimulatedThrottleRange.ZeroToOne, enabled: true));
-        Near(0, RelativeThrottleSensitivity.Apply(
-            0.002, 0, -0.016, 0.25, SimulatedThrottleRange.ZeroToOne, enabled: true));
+        Near(0.7, RelativeThrottleSensitivity.Apply(0.4, 0.7, 1, 0.016, 4, enabled: true));
     }
 
     private static void ExternalIntegratorOwnsSensitivity()
@@ -738,7 +727,6 @@ internal static class Program
             controlsEnabled: true,
             paused: false,
             axisModifierHeld: false,
-            inputActive: true,
             externalIntegratorActive: true,
             hasPreviousValue: true));
     }
@@ -752,21 +740,6 @@ internal static class Program
             controlsEnabled: true,
             paused: false,
             axisModifierHeld: false,
-            inputActive: true,
-            externalIntegratorActive: false,
-            hasPreviousValue: true));
-    }
-
-    private static void SubThresholdInputUsesSensitivity()
-    {
-        True(RelativeThrottleSensitivity.ShouldApply(
-            enabled: true,
-            relativeThrottleMode: true,
-            detentedAircraft: true,
-            controlsEnabled: true,
-            paused: false,
-            axisModifierHeld: false,
-            inputActive: true,
             externalIntegratorActive: false,
             hasPreviousValue: true));
     }

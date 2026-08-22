@@ -20,7 +20,6 @@ internal static class RuntimeController
     private static DetentIndicatorSnapshot _indicator = DetentIndicatorSnapshot.Hidden;
     private static bool _hasEffectiveSimulatedThrottle;
     private static double _effectiveSimulatedThrottle;
-    private static SimulatedThrottleRange _simulatedThrottleRange;
     private static PilotPlayerState? _localState;
     private static Aircraft? _localAircraft;
     private static ControlInputs? _localInputs;
@@ -118,7 +117,10 @@ internal static class RuntimeController
         RefreshApplicableCapabilities();
     }
 
-    public static void ObserveThrottle(PilotPlayerState state, bool externalRelativeThrottleIntegrator)
+    public static void ObserveThrottle(
+        PilotPlayerState state,
+        bool externalRelativeThrottleIntegrator,
+        bool externalUsesSignedMapping)
     {
         try
         {
@@ -162,9 +164,6 @@ internal static class RuntimeController
                 _lastObservedSimulationTime = 0f;
                 _hasLastObservedSimulationTime = false;
                 _hasEffectiveSimulatedThrottle = false;
-                _simulatedThrottleRange = PlayerSettings.throttleUseNegative
-                    ? SimulatedThrottleRange.NegativeOneToOne
-                    : SimulatedThrottleRange.ZeroToOne;
                 _indicator = DetentIndicatorSnapshot.Hidden;
                 ResolveAirframePreset(aircraft!);
                 ResetAircraftCapabilities();
@@ -194,49 +193,38 @@ internal static class RuntimeController
                 reverseDirection);
             CacheComponentGateInput(frame, controlsEnabled, paused, axisModifierHeld, command);
             var airframeAllowsDetents = AirframeAllowsDetents();
-            var detentsAllowed = airframeAllowsDetents && relativeThrottle;
+            var compatibleIntegrator = !externalRelativeThrottleIntegrator || externalUsesSignedMapping;
+            var detentsAllowed = airframeAllowsDetents && relativeThrottle && compatibleIntegrator;
             var idleApplies = settings.IdleEnabled && _hasAirbrake;
             var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
 
             var simulatedThrottleBefore = simulatedThrottleAccessor(state);
-            var mappingFallback = externalRelativeThrottleIntegrator
+            var simulatedThrottleRange = externalUsesSignedMapping || PlayerSettings.throttleUseNegative
                 ? SimulatedThrottleRange.NegativeOneToOne
-                : _hasEffectiveSimulatedThrottle
-                    ? _simulatedThrottleRange
-                    : PlayerSettings.throttleUseNegative
-                        ? SimulatedThrottleRange.NegativeOneToOne
-                        : SimulatedThrottleRange.ZeroToOne;
-            _simulatedThrottleRange = SimulatedThrottleMapping.Resolve(
-                simulatedThrottleBefore,
-                requestedThrottle,
-                mappingFallback);
-            var sensitivityEnabled = RelativeThrottleSensitivity.ShouldApply(
+                : SimulatedThrottleRange.ZeroToOne;
+            var sensitivityEnabled = settings.ThrottleSensitivity != 1f &&
+                                     RelativeThrottleSensitivity.ShouldApply(
                 settings.Enabled,
                 relativeThrottle,
                 airframeAllowsDetents,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
-                rawThrottle != 0f,
                 externalRelativeThrottleIntegrator,
                 _hasEffectiveSimulatedThrottle);
-            // Vanilla relative throttle uses input direction; scale that unclamped step.
-            var inputDelta = rawThrottle > 0f
-                ? Time.deltaTime
-                : rawThrottle < 0f ? -Time.deltaTime : 0f;
             var effectiveSimulatedThrottle = RelativeThrottleSensitivity.Apply(
                 _effectiveSimulatedThrottle,
                 simulatedThrottleBefore,
-                inputDelta,
+                rawThrottle,
+                Time.deltaTime,
                 settings.ThrottleSensitivity,
-                _simulatedThrottleRange,
                 sensitivityEnabled);
             if (sensitivityEnabled)
             {
                 simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
                 requestedThrottle = (float)SimulatedThrottleMapping.ToPublic(
                     effectiveSimulatedThrottle,
-                    _simulatedThrottleRange);
+                    simulatedThrottleRange);
                 inputs.throttle = requestedThrottle;
             }
 
@@ -262,7 +250,7 @@ internal static class RuntimeController
                 settings.EndpointEpsilon,
                 settings.Enabled && detentsAllowed,
                 relativeThrottle,
-                _simulatedThrottleRange == SimulatedThrottleRange.NegativeOneToOne,
+                simulatedThrottleRange,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
@@ -514,7 +502,6 @@ internal static class RuntimeController
         _indicator = DetentIndicatorSnapshot.Hidden;
         _hasEffectiveSimulatedThrottle = false;
         _effectiveSimulatedThrottle = 0;
-        _simulatedThrottleRange = SimulatedThrottleRange.ZeroToOne;
         _lastObservedFrame = -1;
         _lastObservedSimulationTime = 0f;
         _hasLastObservedSimulationTime = false;

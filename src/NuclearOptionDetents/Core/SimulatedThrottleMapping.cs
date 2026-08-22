@@ -10,73 +10,32 @@ public enum SimulatedThrottleRange
 
 public static class SimulatedThrottleMapping
 {
-    private const double ComparisonTolerance = 0.0001;
-
-    public static SimulatedThrottleRange Resolve(
-        double simulatedThrottle,
-        double publicThrottle,
-        SimulatedThrottleRange fallback)
-    {
-        if (!IsFinite(simulatedThrottle) || !IsFinite(publicThrottle))
-        {
-            return fallback;
-        }
-
-        var zeroRangeValid = simulatedThrottle >= -ComparisonTolerance &&
-                             simulatedThrottle <= 1 + ComparisonTolerance;
-        var signedRangeValid = simulatedThrottle >= -1 - ComparisonTolerance &&
-                               simulatedThrottle <= 1 + ComparisonTolerance;
-        if (!zeroRangeValid && signedRangeValid)
-        {
-            return SimulatedThrottleRange.NegativeOneToOne;
-        }
-
-        if (!signedRangeValid)
-        {
-            return fallback;
-        }
-
-        var output = Clamp01(publicThrottle);
-        var zeroError = Math.Abs(Clamp01(simulatedThrottle) - output);
-        var signedError = Math.Abs(Clamp01(0.5 * (simulatedThrottle + 1)) - output);
-        if (zeroError + ComparisonTolerance < signedError)
-        {
-            return SimulatedThrottleRange.ZeroToOne;
-        }
-
-        if (signedError + ComparisonTolerance < zeroError)
-        {
-            return SimulatedThrottleRange.NegativeOneToOne;
-        }
-
-        return fallback;
-    }
-
     public static double ToPublic(double simulatedThrottle, SimulatedThrottleRange range) =>
-        Clamp01(range == SimulatedThrottleRange.NegativeOneToOne
+        ClampPublic(range == SimulatedThrottleRange.NegativeOneToOne
             ? 0.5 * (simulatedThrottle + 1)
             : simulatedThrottle);
 
     public static double ToSimulated(double publicThrottle, SimulatedThrottleRange range)
     {
-        var normalized = Clamp01(publicThrottle);
+        var normalized = ClampPublic(publicThrottle);
         return range == SimulatedThrottleRange.NegativeOneToOne
             ? (normalized * 2) - 1
             : normalized;
     }
 
-    public static double ClampSimulated(double value, SimulatedThrottleRange range)
+    // Vanilla's private accumulator can travel to -1 even when public throttle
+    // uses the zero-to-one mapping and clamps that negative travel to idle.
+    public static double ClampSimulated(double value)
     {
-        var minimum = range == SimulatedThrottleRange.NegativeOneToOne ? -1 : 0;
         if (!IsFinite(value))
         {
-            return minimum;
+            return -1;
         }
 
-        return Math.Max(minimum, Math.Min(1, value));
+        return Math.Max(-1, Math.Min(1, value));
     }
 
-    private static double Clamp01(double value)
+    public static double ClampPublic(double value)
     {
         if (!IsFinite(value))
         {

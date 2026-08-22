@@ -102,8 +102,12 @@ public static class DetentIndicatorText
             return $"{boundary} LOCK";
         }
 
-        var progress = Math.Max(0, Math.Min(1, line.Progress));
-        var percent = (int)Math.Round(progress * 100, MidpointRounding.AwayFromZero);
-        return $"{boundary} HOLD {percent}%";
+        return $"{boundary} HOLD {RoundedPercent(line.Progress)}%";
+    }
+
+    internal static int RoundedPercent(double progress)
+    {
+        var clamped = Math.Max(0, Math.Min(1, progress));
+        return (int)Math.Round(clamped * 100, MidpointRounding.AwayFromZero);
     }
 }

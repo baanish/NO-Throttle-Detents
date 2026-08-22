@@ -1,32 +1,38 @@
 using System.Reflection;
 using HarmonyLib;
 using NuclearOptionDetents.Core;
-using UnityEngine;
 
 namespace NuclearOptionDetents.Patches;
 
 internal static class ThrottleInputPatch
 {
-    private const float PatchRefreshSeconds = 1f;
     private const string PauelsThrottlePatchType = "PRF.Fixes.ThrottleRelativeVelocity";
     private const string PauelsThrottlePatchMethod = "ThrottleAxis1ControlsReplacer";
 
-    private static MethodBase? _observedMethod;
-    private static float _nextPatchRefresh;
-    private static bool _pauelsThrottlePatchActive;
+    private static bool _originalRanLastCall = true;
+    private static bool _externalUsesSignedMapping;
 
     [HarmonyPriority(Priority.Last)]
-    public static void Postfix(PilotPlayerState __instance, MethodBase __originalMethod)
+    public static void Postfix(
+        PilotPlayerState __instance,
+        MethodBase __originalMethod,
+        bool __runOriginal)
     {
-        var now = Time.unscaledTime;
-        if (!ReferenceEquals(_observedMethod, __originalMethod) || now >= _nextPatchRefresh)
+        if (__runOriginal)
         {
-            _observedMethod = __originalMethod;
-            _nextPatchRefresh = now + PatchRefreshSeconds;
-            _pauelsThrottlePatchActive = HasPauelsThrottlePatch(__originalMethod);
+            _originalRanLastCall = true;
+            _externalUsesSignedMapping = false;
+        }
+        else if (_originalRanLastCall)
+        {
+            _originalRanLastCall = false;
+            _externalUsesSignedMapping = HasPauelsThrottlePatch(__originalMethod);
         }
 
-        RuntimeController.ObserveThrottle(__instance, _pauelsThrottlePatchActive);
+        RuntimeController.ObserveThrottle(
+            __instance,
+            externalRelativeThrottleIntegrator: !__runOriginal,
+            externalUsesSignedMapping: _externalUsesSignedMapping);
     }
 
     private static bool HasPauelsThrottlePatch(MethodBase method)

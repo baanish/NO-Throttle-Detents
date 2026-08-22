@@ -16,7 +16,17 @@ internal sealed class DetentHudIndicator
     private TextMeshProUGUI? _sourceLabel;
     private GameObject? _indicatorObject;
     private TextMeshProUGUI? _indicatorLabel;
-    private string _lastText = string.Empty;
+    private bool _hasTextKey;
+    private bool _lastWasIdle;
+    private EndpointDetentState _lastState;
+    private int _lastPercent;
+    private bool _hasStyle;
+    private TMP_FontAsset? _lastFont;
+    private Material? _lastMaterial;
+    private Color _lastColor;
+    private FontStyles _lastFontStyle;
+    private float _lastFontSize;
+    private Vector3 _lastScale;
 
     public bool IsAvailable =>
         ThrottleLabelField is not null && ThrottleLabelField.FieldType == typeof(TextMeshProUGUI);
@@ -36,20 +46,21 @@ internal sealed class DetentHudIndicator
             return;
         }
 
-        var text = DetentIndicatorText.Format(snapshot);
-        if (text.Length == 0)
+        var wasIdle = snapshot.Idle.Visible;
+        var line = wasIdle ? snapshot.Idle : snapshot.Afterburner;
+        var percent = line.State == EndpointDetentState.Holding
+            ? DetentIndicatorText.RoundedPercent(line.Progress)
+            : -1;
+        if (!_hasTextKey || wasIdle != _lastWasIdle || line.State != _lastState || percent != _lastPercent)
         {
-            SetVisible(false);
-            return;
+            _indicatorLabel!.text = DetentIndicatorText.Format(snapshot);
+            _hasTextKey = true;
+            _lastWasIdle = wasIdle;
+            _lastState = line.State;
+            _lastPercent = percent;
         }
 
         UpdateStyleAndPosition();
-        if (!string.Equals(_lastText, text, System.StringComparison.Ordinal))
-        {
-            _indicatorLabel!.text = text;
-            _lastText = text;
-        }
-
         SetVisible(_sourceLabel!.enabled && _sourceLabel.gameObject.activeInHierarchy);
     }
 
@@ -65,7 +76,17 @@ internal sealed class DetentHudIndicator
         _sourceLabel = null;
         _indicatorObject = null;
         _indicatorLabel = null;
-        _lastText = string.Empty;
+        _hasTextKey = false;
+        _lastWasIdle = false;
+        _lastState = default;
+        _lastPercent = 0;
+        _hasStyle = false;
+        _lastFont = null;
+        _lastMaterial = null;
+        _lastColor = default;
+        _lastFontStyle = default;
+        _lastFontSize = 0f;
+        _lastScale = default;
     }
 
     private bool EnsureLabel(FlightHud hud)
@@ -130,17 +151,38 @@ internal sealed class DetentHudIndicator
         var label = _indicatorLabel!;
         var hudCenter = _hudCenter!;
 
-        label.enabled = true;
-        label.font = source.font;
-        label.fontSharedMaterial = source.fontSharedMaterial;
-        label.color = source.color;
-        label.fontStyle = source.fontStyle;
-        label.fontSize = Mathf.Max(12f, source.fontSize * 0.65f);
-        label.transform.localScale = source.transform.localScale;
+        var font = source.font;
+        var material = source.fontSharedMaterial;
+        var color = source.color;
+        var fontStyle = source.fontStyle;
+        var fontSize = Mathf.Max(12f, source.fontSize * 0.65f);
+        var sourceScale = source.transform.localScale;
+        if (!_hasStyle || !ReferenceEquals(_lastFont, font) || !ReferenceEquals(_lastMaterial, material) ||
+            _lastColor != color || _lastFontStyle != fontStyle || _lastFontSize != fontSize ||
+            _lastScale != sourceScale)
+        {
+            label.font = font;
+            label.fontSharedMaterial = material;
+            label.color = color;
+            label.fontStyle = fontStyle;
+            label.fontSize = fontSize;
+            label.transform.localScale = sourceScale;
+            _hasStyle = true;
+            _lastFont = font;
+            _lastMaterial = material;
+            _lastColor = color;
+            _lastFontStyle = fontStyle;
+            _lastFontSize = fontSize;
+            _lastScale = sourceScale;
+        }
 
         var sourcePosition = hudCenter.InverseTransformPoint(source.transform.position);
-        label.transform.localPosition = sourcePosition +
-                                        new Vector3(0f, -Mathf.Max(22f, source.fontSize * 0.65f), 0f);
+        var labelPosition = sourcePosition +
+                            new Vector3(0f, -Mathf.Max(22f, source.fontSize * 0.65f), 0f);
+        if (label.transform.localPosition != labelPosition)
+        {
+            label.transform.localPosition = labelPosition;
+        }
     }
 
     private void SetVisible(bool visible)
