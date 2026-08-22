@@ -37,7 +37,7 @@ prohibit BepInEx or this mod.
 This is a v0.2 prototype. Installed-build notes for contributors are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
-![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.jpg)
+![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.png)
 
 ## Install
 
