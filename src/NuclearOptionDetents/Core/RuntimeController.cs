@@ -202,11 +202,12 @@ internal static class RuntimeController
             var simulatedThrottleRange = externalUsesSignedMapping || PlayerSettings.throttleUseNegative
                 ? SimulatedThrottleRange.NegativeOneToOne
                 : SimulatedThrottleRange.ZeroToOne;
+            var hasLiveDetentCapability = _hasAirbrake || _hasAfterburner;
             var sensitivityEnabled = settings.ThrottleSensitivity != 1f &&
                                      RelativeThrottleSensitivity.ShouldApply(
                 settings.Enabled,
                 relativeThrottle,
-                airframeAllowsDetents,
+                airframeAllowsDetents && hasLiveDetentCapability,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
