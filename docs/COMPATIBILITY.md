@@ -48,6 +48,8 @@ updates. After a game update, recheck these targets and run the mod.
 - ControlSurface job fields control-input field: `NuclearOption.Jobs.ControlInputsBurst NuclearOption.Jobs.ControlSurfaceFields::controlInputs`
 - ControlSurface job fields max-split field: `System.Single NuclearOption.Jobs.ControlSurfaceFields::maxSplit`
 - ControlSurface job execute: `System.Void NuclearOption.Jobs.ControlSurfaceJob_Math::Execute(NuclearOption.Jobs.ControlSurfaceFields& fields, UnityEngine.Quaternion& mainRotation, System.Int32 upperIndex, System.Int32 lowerIndex)`
+- Flight HUD center: `UnityEngine.Transform FlightHud::GetHUDCenter()`
+- Flight HUD throttle label: `TMPro.TextMeshProUGUI ThrottleGauge::throttleLabel`
 
 ## Throttle mapping
 

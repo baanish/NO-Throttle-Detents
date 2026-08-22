@@ -17,6 +17,10 @@ internal static class RuntimeController
     private static readonly List<AfterburnerNozzleSample> AfterburnerSamples = new();
     private static EffectiveSettings _settings;
     private static bool _hasSettings;
+    private static DetentIndicatorSnapshot _indicator = DetentIndicatorSnapshot.Hidden;
+    private static bool _hasEffectiveSimulatedThrottle;
+    private static double _effectiveSimulatedThrottle;
+    private static SimulatedThrottleRange _simulatedThrottleRange;
     private static PilotPlayerState? _localState;
     private static Aircraft? _localAircraft;
     private static ControlInputs? _localInputs;
@@ -98,6 +102,8 @@ internal static class RuntimeController
     public static string CurrentAircraftDisplayName =>
         string.IsNullOrWhiteSpace(_airframeName) ? "No aircraft" : _airframeName;
 
+    public static DetentIndicatorSnapshot IndicatorSnapshot => _indicator;
+
     public static void SetPatchStatus(
         bool throttleObserverActive,
         bool airbrakeComponentGateActive,
@@ -112,7 +118,7 @@ internal static class RuntimeController
         RefreshApplicableCapabilities();
     }
 
-    public static void ObserveThrottle(PilotPlayerState state)
+    public static void ObserveThrottle(PilotPlayerState state, bool externalRelativeThrottleIntegrator)
     {
         try
         {
@@ -155,6 +161,11 @@ internal static class RuntimeController
                 _lastObservedFrame = -1;
                 _lastObservedSimulationTime = 0f;
                 _hasLastObservedSimulationTime = false;
+                _hasEffectiveSimulatedThrottle = false;
+                _simulatedThrottleRange = PlayerSettings.throttleUseNegative
+                    ? SimulatedThrottleRange.NegativeOneToOne
+                    : SimulatedThrottleRange.ZeroToOne;
+                _indicator = DetentIndicatorSnapshot.Hidden;
                 ResolveAirframePreset(aircraft!);
                 ResetAircraftCapabilities();
                 RefreshApplicableCapabilities();
@@ -186,6 +197,49 @@ internal static class RuntimeController
             var detentsAllowed = airframeAllowsDetents && relativeThrottle;
             var idleApplies = settings.IdleEnabled && _hasAirbrake;
             var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
+
+            var simulatedThrottleBefore = simulatedThrottleAccessor(state);
+            var mappingFallback = externalRelativeThrottleIntegrator
+                ? SimulatedThrottleRange.NegativeOneToOne
+                : _hasEffectiveSimulatedThrottle
+                    ? _simulatedThrottleRange
+                    : PlayerSettings.throttleUseNegative
+                        ? SimulatedThrottleRange.NegativeOneToOne
+                        : SimulatedThrottleRange.ZeroToOne;
+            _simulatedThrottleRange = SimulatedThrottleMapping.Resolve(
+                simulatedThrottleBefore,
+                requestedThrottle,
+                mappingFallback);
+            var sensitivityEnabled = RelativeThrottleSensitivity.ShouldApply(
+                settings.Enabled,
+                relativeThrottle,
+                airframeAllowsDetents,
+                controlsEnabled,
+                paused,
+                axisModifierHeld,
+                rawThrottle != 0f,
+                externalRelativeThrottleIntegrator,
+                _hasEffectiveSimulatedThrottle);
+            // Vanilla relative throttle uses input direction; scale that unclamped step.
+            var inputDelta = rawThrottle > 0f
+                ? Time.deltaTime
+                : rawThrottle < 0f ? -Time.deltaTime : 0f;
+            var effectiveSimulatedThrottle = RelativeThrottleSensitivity.Apply(
+                _effectiveSimulatedThrottle,
+                simulatedThrottleBefore,
+                inputDelta,
+                settings.ThrottleSensitivity,
+                _simulatedThrottleRange,
+                sensitivityEnabled);
+            if (sensitivityEnabled)
+            {
+                simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
+                requestedThrottle = (float)SimulatedThrottleMapping.ToPublic(
+                    effectiveSimulatedThrottle,
+                    _simulatedThrottleRange);
+                inputs.throttle = requestedThrottle;
+            }
+
             var snapshot = _runtime.Update(new DetentRuntimeInput(
                 simulationTime,
                 requestedThrottle,
@@ -197,11 +251,9 @@ internal static class RuntimeController
                 paused,
                 axisModifierHeld,
                 relativeThrottle));
-
-            var simulatedThrottleBefore = simulatedThrottleAccessor(state);
             var boundaryHold = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
                 requestedThrottle,
-                simulatedThrottleBefore,
+                effectiveSimulatedThrottle,
                 command,
                 snapshot.IdleState,
                 snapshot.AfterburnerState,
@@ -210,7 +262,7 @@ internal static class RuntimeController
                 settings.EndpointEpsilon,
                 settings.Enabled && detentsAllowed,
                 relativeThrottle,
-                PlayerSettings.throttleUseNegative,
+                _simulatedThrottleRange == SimulatedThrottleRange.NegativeOneToOne,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
@@ -222,8 +274,24 @@ internal static class RuntimeController
             }
             if (boundaryHold.ShouldPinSimulatedThrottle)
             {
-                simulatedThrottleAccessor(state) = (float)boundaryHold.SimulatedThrottle;
+                effectiveSimulatedThrottle = boundaryHold.SimulatedThrottle;
+                simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
             }
+
+            _effectiveSimulatedThrottle = effectiveSimulatedThrottle;
+            _hasEffectiveSimulatedThrottle = true;
+            _indicator = DetentIndicatorPolicy.Evaluate(
+                snapshot,
+                inputs.throttle,
+                _runtime.IdleDetent.Boundary,
+                _runtime.AfterburnerDetent.Boundary,
+                settings.EndpointEpsilon,
+                settings.IdleHoldMilliseconds,
+                settings.AfterburnerHoldMilliseconds,
+                settings.IndicatorEnabled,
+                boundaryHold.IsHeld,
+                idleApplies,
+                afterburnerApplies);
             _lastObservedFrame = frame;
             _lastObservedSimulationTime = simulationTime;
             _hasLastObservedSimulationTime = true;
@@ -249,6 +317,7 @@ internal static class RuntimeController
         if (controlsInterrupted)
         {
             _runtime.CancelPendingHolds();
+            _indicator = DetentIndicatorSnapshot.Hidden;
             InvalidateComponentGateInput();
         }
     }
@@ -442,6 +511,10 @@ internal static class RuntimeController
         _afterburnerConfirmedFrame = -1;
         _hasAirbrake = false;
         _hasAfterburner = false;
+        _indicator = DetentIndicatorSnapshot.Hidden;
+        _hasEffectiveSimulatedThrottle = false;
+        _effectiveSimulatedThrottle = 0;
+        _simulatedThrottleRange = SimulatedThrottleRange.ZeroToOne;
         _lastObservedFrame = -1;
         _lastObservedSimulationTime = 0f;
         _hasLastObservedSimulationTime = false;
@@ -525,6 +598,8 @@ internal static class RuntimeController
         _lastObservedFrame = -1;
         _lastObservedSimulationTime = 0f;
         _hasLastObservedSimulationTime = false;
+        _indicator = DetentIndicatorSnapshot.Hidden;
+        _hasEffectiveSimulatedThrottle = false;
         InvalidateComponentGateInput();
         if (!ReferenceEquals(_localAircraft, null) && !ReferenceEquals(_localInputs, null))
         {
@@ -546,7 +621,7 @@ internal static class RuntimeController
     }
 
     private static bool AirframeAllowsDetents() =>
-        _activePreset is not null && !_activePreset.Collective && !_localCollective;
+        AirframePresetCatalog.SupportsDetents(_activePreset, _localCollective);
 
     private static void RefreshApplicableCapabilities()
     {

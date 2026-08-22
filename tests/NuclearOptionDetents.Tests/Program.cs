@@ -63,6 +63,7 @@ internal static class Program
             ("readiness becomes likely after sustained input", ReadinessBecomesLikelyAfterInput),
             ("readiness names the only enabled detent", ReadinessNamesOnlyEnabledDetent),
             ("airframe preset allowlist is pinned", AirframePresetAllowlistIsPinned),
+            ("sensitivity scope is limited to detented aircraft", SensitivityScopeIsLimitedToDetentedAircraft),
             ("all afterburner nozzles must match", AllAfterburnerNozzlesMustMatch),
             ("AB-4 requires all four afterburner nozzles", Ab4RequiresFourAfterburnerNozzles),
             ("live afterburner start is the conservative boundary", LiveAfterburnerStartIsConservativeBoundary),
@@ -84,6 +85,21 @@ internal static class Program
             ("disabled capability does not block readiness", DisabledCapabilityDoesNotBlockReadiness),
             ("low-frequency observer gap counts elapsed dwell", LowFrequencyObserverGapCountsElapsedDwell),
             ("explicit cancellation resets pending holds", ExplicitCancellationResetsPendingHolds),
+            ("observed signed throttle mapping wins over setting", ObservedSignedThrottleMappingWins),
+            ("observed zero throttle mapping wins over setting", ObservedZeroThrottleMappingWins),
+            ("ambiguous throttle mapping uses fallback", AmbiguousThrottleMappingUsesFallback),
+            ("sensitivity scales and clamps relative movement", SensitivityScalesAndClamps),
+            ("external integrator owns sensitivity", ExternalIntegratorOwnsSensitivity),
+            ("non-detent aircraft bypass sensitivity", NonDetentAircraftBypassesSensitivity),
+            ("sub-threshold input still uses sensitivity", SubThresholdInputUsesSensitivity),
+            ("indicator hides when boundary hold bypasses", IndicatorHidesWhenBoundaryHoldBypasses),
+            ("indicator is hidden while bypassed", IndicatorHiddenWhileBypassed),
+            ("indicator shows idle lock progress", IndicatorShowsIdleLockProgress),
+            ("indicator shows afterburner lock", IndicatorShowsAfterburnerLock),
+            ("indicator text is empty while hidden", IndicatorTextIsEmptyWhileHidden),
+            ("indicator text formats idle hold", IndicatorTextFormatsIdleHold),
+            ("indicator text formats afterburner lock", IndicatorTextFormatsAfterburnerLock),
+            ("indicator text prefers idle if both are visible", IndicatorTextPrefersIdle),
         };
 
         int failures = 0;
@@ -675,6 +691,188 @@ internal static class Program
         True(snapshot.AfterburnerUnlocked);
     }
 
+    private static void ObservedSignedThrottleMappingWins()
+    {
+        Equal(
+            SimulatedThrottleRange.NegativeOneToOne,
+            SimulatedThrottleMapping.Resolve(-1, 0, SimulatedThrottleRange.ZeroToOne));
+        Near(-1, SimulatedThrottleMapping.ToSimulated(0, SimulatedThrottleRange.NegativeOneToOne));
+    }
+
+    private static void ObservedZeroThrottleMappingWins()
+    {
+        Equal(
+            SimulatedThrottleRange.ZeroToOne,
+            SimulatedThrottleMapping.Resolve(0.25, 0.25, SimulatedThrottleRange.NegativeOneToOne));
+        Near(0.25, SimulatedThrottleMapping.ToPublic(0.25, SimulatedThrottleRange.ZeroToOne));
+    }
+
+    private static void AmbiguousThrottleMappingUsesFallback()
+    {
+        Equal(
+            SimulatedThrottleRange.NegativeOneToOne,
+            SimulatedThrottleMapping.Resolve(1, 1, SimulatedThrottleRange.NegativeOneToOne));
+        Equal(
+            SimulatedThrottleRange.ZeroToOne,
+            SimulatedThrottleMapping.Resolve(1, 1, SimulatedThrottleRange.ZeroToOne));
+    }
+
+    private static void SensitivityScalesAndClamps()
+    {
+        Near(0.05, RelativeThrottleSensitivity.Apply(
+            0, 0.1, 0.1, 0.5, SimulatedThrottleRange.ZeroToOne, enabled: true));
+        Near(1, RelativeThrottleSensitivity.Apply(
+            0.9, 1, 0.1, 4, SimulatedThrottleRange.NegativeOneToOne, enabled: true));
+        Near(0.006, RelativeThrottleSensitivity.Apply(
+            0.01, 0, -0.016, 0.25, SimulatedThrottleRange.ZeroToOne, enabled: true));
+        Near(0, RelativeThrottleSensitivity.Apply(
+            0.002, 0, -0.016, 0.25, SimulatedThrottleRange.ZeroToOne, enabled: true));
+    }
+
+    private static void ExternalIntegratorOwnsSensitivity()
+    {
+        False(RelativeThrottleSensitivity.ShouldApply(
+            enabled: true,
+            relativeThrottleMode: true,
+            detentedAircraft: true,
+            controlsEnabled: true,
+            paused: false,
+            axisModifierHeld: false,
+            inputActive: true,
+            externalIntegratorActive: true,
+            hasPreviousValue: true));
+    }
+
+    private static void NonDetentAircraftBypassesSensitivity()
+    {
+        False(RelativeThrottleSensitivity.ShouldApply(
+            enabled: true,
+            relativeThrottleMode: true,
+            detentedAircraft: false,
+            controlsEnabled: true,
+            paused: false,
+            axisModifierHeld: false,
+            inputActive: true,
+            externalIntegratorActive: false,
+            hasPreviousValue: true));
+    }
+
+    private static void SubThresholdInputUsesSensitivity()
+    {
+        True(RelativeThrottleSensitivity.ShouldApply(
+            enabled: true,
+            relativeThrottleMode: true,
+            detentedAircraft: true,
+            controlsEnabled: true,
+            paused: false,
+            axisModifierHeld: false,
+            inputActive: true,
+            externalIntegratorActive: false,
+            hasPreviousValue: true));
+    }
+
+    private static void IndicatorHidesWhenBoundaryHoldBypasses()
+    {
+        var runtime = new DetentRuntimeSnapshot(
+            bypassed: false,
+            EndpointDetentState.Holding,
+            idleElapsedSeconds: 0.1,
+            airbrakeInhibited: false,
+            EndpointDetentState.Locked,
+            afterburnerElapsedSeconds: 0,
+            afterburnerUnlocked: false);
+        var indicator = DetentIndicatorPolicy.Evaluate(
+            runtime, 0, 0, 0.9, 0.001, 200, 200,
+            enabled: true, boundaryHeld: false, idleApplies: true, afterburnerApplies: false);
+
+        False(indicator.Visible);
+    }
+    private static void IndicatorHiddenWhileBypassed()
+    {
+        var runtime = new DetentRuntimeSnapshot(
+            bypassed: true,
+            EndpointDetentState.Holding,
+            idleElapsedSeconds: 0.1,
+            airbrakeInhibited: false,
+            EndpointDetentState.Locked,
+            afterburnerElapsedSeconds: 0,
+            afterburnerUnlocked: false);
+        var indicator = DetentIndicatorPolicy.Evaluate(
+            runtime, 0, 0, 0.9, 0.001, 200, 200,
+            enabled: true, boundaryHeld: true, idleApplies: true, afterburnerApplies: true);
+
+        False(indicator.Visible);
+    }
+
+    private static void IndicatorShowsIdleLockProgress()
+    {
+        var runtime = new DetentRuntimeSnapshot(
+            bypassed: false,
+            EndpointDetentState.Holding,
+            idleElapsedSeconds: 0.1,
+            airbrakeInhibited: true,
+            EndpointDetentState.Locked,
+            afterburnerElapsedSeconds: 0,
+            afterburnerUnlocked: false);
+        var indicator = DetentIndicatorPolicy.Evaluate(
+            runtime, 0.000001, 0, 0.9, 0.001, 200, 200,
+            enabled: true, boundaryHeld: true, idleApplies: true, afterburnerApplies: true);
+
+        True(indicator.Idle.Visible);
+        Equal(EndpointDetentState.Holding, indicator.Idle.State);
+        Near(0.5, indicator.Idle.Progress);
+        False(indicator.Afterburner.Visible);
+    }
+
+    private static void IndicatorShowsAfterburnerLock()
+    {
+        var runtime = new DetentRuntimeSnapshot(
+            bypassed: false,
+            EndpointDetentState.Locked,
+            idleElapsedSeconds: 0,
+            airbrakeInhibited: false,
+            EndpointDetentState.Locked,
+            afterburnerElapsedSeconds: 0,
+            afterburnerUnlocked: false);
+        var indicator = DetentIndicatorPolicy.Evaluate(
+            runtime, 0.899999, 0, 0.9, 0.001, 200, 200,
+            enabled: true, boundaryHeld: true, idleApplies: false, afterburnerApplies: true);
+
+        True(indicator.Afterburner.Visible);
+        Equal(EndpointDetentState.Locked, indicator.Afterburner.State);
+    }
+
+    private static void IndicatorTextIsEmptyWhileHidden()
+    {
+        Equal(string.Empty, DetentIndicatorText.Format(DetentIndicatorSnapshot.Hidden));
+    }
+
+    private static void IndicatorTextFormatsIdleHold()
+    {
+        var snapshot = new DetentIndicatorSnapshot(
+            new DetentIndicatorLine(true, EndpointDetentState.Holding, 0.5),
+            default);
+
+        Equal("IDLE HOLD 50%", DetentIndicatorText.Format(snapshot));
+    }
+
+    private static void IndicatorTextFormatsAfterburnerLock()
+    {
+        var snapshot = new DetentIndicatorSnapshot(
+            default,
+            new DetentIndicatorLine(true, EndpointDetentState.Locked, 0));
+
+        Equal("AB LOCK", DetentIndicatorText.Format(snapshot));
+    }
+
+    private static void IndicatorTextPrefersIdle()
+    {
+        var snapshot = new DetentIndicatorSnapshot(
+            new DetentIndicatorLine(true, EndpointDetentState.Locked, 0),
+            new DetentIndicatorLine(true, EndpointDetentState.Locked, 0));
+
+        Equal("IDLE LOCK", DetentIndicatorText.Format(snapshot));
+    }
     private static void ReadinessReportsDisabledMod()
     {
         var result = Readiness(masterEnabled: false);
@@ -815,6 +1013,30 @@ internal static class Program
         False(AirframePresetCatalog.AfterburnerRangeMatches(ifrit, 0.85f, 1f));
         True(AirframePresetCatalog.TryGet("Fighter1", out var revoker));
         True(AirframePresetCatalog.AfterburnerRangeMatches(revoker, 0.9f, 1f));
+    }
+
+    private static void SensitivityScopeIsLimitedToDetentedAircraft()
+    {
+        var detentedIds = new[]
+        {
+            "CAS1", "Darkreach", "FastBomber1", "Multirole1",
+            "Fighter1", "SmallFighter1", "trainer", "VTOLTrainer1",
+        };
+        foreach (var id in detentedIds)
+        {
+            True(AirframePresetCatalog.TryGet(id, out var preset));
+            True(AirframePresetCatalog.SupportsDetents(preset, runtimeCollective: false));
+        }
+
+        foreach (var id in new[] { "COIN", "EW1", "AttackHelo1", "UtilityHelo1", "QuadVTOL1" })
+        {
+            True(AirframePresetCatalog.TryGet(id, out var preset));
+            False(AirframePresetCatalog.SupportsDetents(preset, runtimeCollective: false));
+        }
+
+        True(AirframePresetCatalog.TryGet("Multirole1", out var ifrit));
+        False(AirframePresetCatalog.SupportsDetents(ifrit, runtimeCollective: true));
+        False(AirframePresetCatalog.SupportsDetents(null, runtimeCollective: false));
     }
 
     private static void AllAfterburnerNozzlesMustMatch()

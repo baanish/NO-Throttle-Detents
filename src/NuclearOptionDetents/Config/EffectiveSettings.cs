@@ -7,6 +7,8 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
     public EffectiveSettings(
         bool enabled,
         bool debugLogging,
+        bool indicatorEnabled,
+        float throttleSensitivity,
         bool idleEnabled,
         int idleHoldMilliseconds,
         bool afterburnerEnabled,
@@ -15,14 +17,16 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         float endpointEpsilon,
         float resetHysteresis)
     {
-        (Enabled, DebugLogging, IdleEnabled, IdleHoldMilliseconds, AfterburnerEnabled,
+        (Enabled, DebugLogging, IndicatorEnabled, ThrottleSensitivity, IdleEnabled, IdleHoldMilliseconds, AfterburnerEnabled,
             AfterburnerHoldMilliseconds, CommandThreshold, EndpointEpsilon, ResetHysteresis) =
-            (enabled, debugLogging, idleEnabled, idleHoldMilliseconds, afterburnerEnabled,
+            (enabled, debugLogging, indicatorEnabled, throttleSensitivity, idleEnabled, idleHoldMilliseconds, afterburnerEnabled,
                 afterburnerHoldMilliseconds, commandThreshold, endpointEpsilon, resetHysteresis);
     }
 
     public bool Enabled { get; }
     public bool DebugLogging { get; }
+    public bool IndicatorEnabled { get; }
+    public float ThrottleSensitivity { get; }
     public bool IdleEnabled { get; }
     public int IdleHoldMilliseconds { get; }
     public bool AfterburnerEnabled { get; }
@@ -34,6 +38,8 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
     public bool Equals(EffectiveSettings other) =>
         Enabled == other.Enabled &&
         DebugLogging == other.DebugLogging &&
+        IndicatorEnabled == other.IndicatorEnabled &&
+        ThrottleSensitivity.Equals(other.ThrottleSensitivity) &&
         IdleEnabled == other.IdleEnabled &&
         IdleHoldMilliseconds == other.IdleHoldMilliseconds &&
         AfterburnerEnabled == other.AfterburnerEnabled &&
@@ -50,6 +56,8 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         {
             var hash = Enabled ? 1 : 0;
             hash = (hash * 397) ^ (DebugLogging ? 1 : 0);
+            hash = (hash * 397) ^ (IndicatorEnabled ? 1 : 0);
+            hash = (hash * 397) ^ ThrottleSensitivity.GetHashCode();
             hash = (hash * 397) ^ (IdleEnabled ? 1 : 0);
             hash = (hash * 397) ^ IdleHoldMilliseconds;
             hash = (hash * 397) ^ (AfterburnerEnabled ? 1 : 0);

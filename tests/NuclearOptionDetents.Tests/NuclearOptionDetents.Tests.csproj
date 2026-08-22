@@ -18,6 +18,9 @@
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ReferenceOwnership.cs" Link="Core\ReferenceOwnership.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\AirbrakeCapabilityPaths.cs" Link="Core\AirbrakeCapabilityPaths.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentTiming.cs" Link="Core\DetentTiming.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentIndicator.cs" Link="Core\DetentIndicator.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\RelativeThrottleSensitivity.cs" Link="Core\RelativeThrottleSensitivity.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\SimulatedThrottleMapping.cs" Link="Core\SimulatedThrottleMapping.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Config\EffectiveSettings.cs" Link="Config\EffectiveSettings.cs" />
   </ItemGroup>
 </Project>

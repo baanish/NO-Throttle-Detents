@@ -31,7 +31,9 @@ DEFAULT BEHAVIOR
 At idle, keep holding decrease for 200 ms before the automatic airbrake can
 open. At the aircraft's captured full-dry/afterburner boundary, keep holding
 increase for 200 ms before afterburner is allowed. Releasing early resets the
-hold. Relative throttle mode is required; absolute/HOTAS mode remains vanilla
+hold. A small indicator shows active locks. Relative-throttle sensitivity is
+configurable on aircraft with a supported detent; use PauelsRandomFixes for
+other aircraft. Relative throttle mode is required; absolute/HOTAS mode remains vanilla
 in version @VERSION@.
 
 EXISTING BEPINEX INSTALLATION

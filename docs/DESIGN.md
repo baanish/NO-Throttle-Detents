@@ -37,6 +37,19 @@ rather than a fixed number of frames. The state machine is intentionally kept
 separate from game reflection so it can be tested and changed without a live
 game.
 
+## Sensitivity and indicator
+
+The sensitivity multiplier scales the game's relative-throttle step before the
+state machine sees it. `1x` preserves the observed vanilla value. The feature
+uses the same pass-through scope as the detents and yields rate control to
+PauelsRandomFixes while its `ThrottleRelativeVelocity` prefix is active; detent
+boundary holds still run after that prefix.
+
+The in-game indicator is derived from the canonical boundary-hold result. It
+clones the native throttle-label style below the flight HUD's throttle gauge.
+It is visible only while the hold parks throttle at a locked or holding
+boundary, and disappears on release, bypass, or lifecycle reset.
+
 ## Component gates
 
 The idle gate temporarily avoids the exact-zero input that opens a component

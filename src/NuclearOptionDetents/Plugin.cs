@@ -2,6 +2,7 @@ using BepInEx;
 using NuclearOptionDetents.Config;
 using NuclearOptionDetents.Core;
 using NuclearOptionDetents.Patches;
+using NuclearOptionDetents.UI;
 using UnityEngine.SceneManagement;
 
 namespace NuclearOptionDetents;
@@ -11,13 +12,21 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.baanish.nuclearoption.detents";
     public const string PluginName = "Nuclear Option Detents";
-    public const string PluginVersion = "0.1.0";
+    public const string PluginVersion = "0.2.0";
 
     private PatchInstaller? _patchInstaller;
+    private DetentHudIndicator? _hudIndicator;
+    private bool _hudFailureLogged;
+
     private void Awake()
     {
         var modConfig = new ModConfig(Config);
         RuntimeController.Initialize(modConfig, Logger);
+        _hudIndicator = new DetentHudIndicator();
+        if (!_hudIndicator.IsAvailable)
+        {
+            Logger.LogWarning("HUD indicator unavailable: ThrottleGauge.throttleLabel was not found with the expected TextMeshProUGUI type.");
+        }
         _patchInstaller = new PatchInstaller(Logger);
         _patchInstaller.Install();
         SceneManager.activeSceneChanged += HandleActiveSceneChanged;
@@ -36,10 +45,31 @@ public sealed class Plugin : BaseUnityPlugin
     private void OnDestroy()
     {
         SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
+        _hudIndicator?.Reset();
         RuntimeController.ResetAll("plugin unload");
         _patchInstaller?.Uninstall();
     }
 
-    private static void HandleActiveSceneChanged(Scene previous, Scene current) =>
+    private void LateUpdate()
+    {
+        try
+        {
+            _hudIndicator?.Render(RuntimeController.IndicatorSnapshot);
+        }
+        catch (System.Exception exception)
+        {
+            _hudIndicator?.Reset();
+            if (!_hudFailureLogged)
+            {
+                Logger.LogWarning($"HUD indicator unavailable: {exception.Message}");
+                _hudFailureLogged = true;
+            }
+        }
+    }
+
+    private void HandleActiveSceneChanged(Scene previous, Scene current)
+    {
+        _hudIndicator?.Reset();
         RuntimeController.ResetAll($"scene changed from '{previous.name}' to '{current.name}'");
+    }
 }
