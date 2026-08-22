@@ -54,17 +54,14 @@ internal static class ThrottleInputPatch
             return false;
         }
 
-        foreach (var patch in patchInfo.Prefixes)
+        if (patchInfo.Prefixes.Count != 1)
         {
-            var patchMethod = patch.PatchMethod;
-            if (patchMethod.Name == PauelsThrottlePatchMethod &&
-                patchMethod.DeclaringType?.FullName == PauelsThrottlePatchType)
-            {
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        var patchMethod = patchInfo.Prefixes[0].PatchMethod;
+        return patchMethod.Name == PauelsThrottlePatchMethod &&
+               patchMethod.DeclaringType?.FullName == PauelsThrottlePatchType;
     }
 }
 

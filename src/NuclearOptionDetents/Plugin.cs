@@ -81,6 +81,7 @@ public sealed class Plugin : BaseUnityPlugin
         catch (System.Exception exception)
         {
             _hudIndicator?.Reset();
+            _hudIndicator = null;
             if (!_hudFailureLogged)
             {
                 Logger.LogWarning($"HUD indicator unavailable: {exception.Message}");
