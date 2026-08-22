@@ -6,6 +6,11 @@ using UnityEngine;
 
 namespace NuclearOptionDetents.UI;
 
+/// <summary>
+/// Draws the detent line under the HUD throttle gauge by cloning the gauge's own label, so the text
+/// inherits the game's font, material, and color instead of hardcoding a style that HUD changes would break.
+/// The clone is owned by this class: every failure path destroys it rather than leaving an orphan on the HUD.
+/// </summary>
 internal sealed class DetentHudIndicator
 {
     private static readonly FieldInfo? ThrottleLabelField =
@@ -28,9 +33,14 @@ internal sealed class DetentHudIndicator
     private float _lastFontSize;
     private Vector3 _lastScale;
 
+    /// <summary>False when the game build no longer exposes the throttle label with the expected type; the plugin then runs without a HUD indicator.</summary>
     public bool IsAvailable =>
         ThrottleLabelField is not null && ThrottleLabelField.FieldType == typeof(TextMeshProUGUI);
 
+    /// <summary>
+    /// Called every frame. Text is rewritten only when the displayed line actually changes, and the clone
+    /// mirrors the source label's visibility so the indicator disappears with the rest of the HUD.
+    /// </summary>
     public void Render(in DetentIndicatorSnapshot snapshot)
     {
         if (!IsAvailable || !snapshot.Visible)
@@ -64,6 +74,7 @@ internal sealed class DetentHudIndicator
         SetVisible(_sourceLabel!.enabled && _sourceLabel.gameObject.activeInHierarchy);
     }
 
+    /// <summary>Destroys the clone and forgets every cached reference, leaving the HUD exactly as vanilla left it.</summary>
     public void Reset()
     {
         if (IsAlive(_indicatorObject))
@@ -89,6 +100,7 @@ internal sealed class DetentHudIndicator
         _lastScale = default;
     }
 
+    /// <summary>Rebuilds the clone whenever any cached HUD object has been destroyed or replaced; false means the HUD is not ready and nothing should be drawn.</summary>
     private bool EnsureLabel(FlightHud hud)
     {
         if (ReferenceEquals(_hud, hud) && IsAlive(_hudCenter) && IsAlive(_sourceLabel) &&
@@ -145,6 +157,7 @@ internal sealed class DetentHudIndicator
         return true;
     }
 
+    /// <summary>Re-applies the source label's style only when it changed, and parks the line just below the gauge so it tracks HUD scaling.</summary>
     private void UpdateStyleAndPosition()
     {
         var source = _sourceLabel!;
@@ -193,6 +206,7 @@ internal sealed class DetentHudIndicator
         }
     }
 
+    /// <summary>Guards against Unity's destroyed-object sentinel, which is non-null to the CLR but compares equal to null.</summary>
     private static bool IsAlive(UnityEngine.Object? value) =>
         !ReferenceEquals(value, null) && value != null;
 }

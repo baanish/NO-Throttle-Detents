@@ -41,6 +41,7 @@ public readonly struct ThrottleBoundaryHoldInput
     public double EndpointEpsilon { get; }
     public bool Enabled { get; }
     public bool RelativeThrottleMode { get; }
+    /// <summary>Range of the accumulator to pin, which follows the player setting or an external integrator's mapping.</summary>
     public SimulatedThrottleRange ThrottleRange { get; }
     public bool ControlsEnabled { get; }
     public bool Paused { get; }
@@ -81,6 +82,11 @@ public static class ThrottleBoundaryHold
     // without producing a visible gap from idle or full dry power.
     public const double InwardOffset = 0.000001;
 
+    /// <summary>
+    /// Passes throttle through untouched unless a locked boundary applies and the command is still
+    /// pushing into it; then the throttle is reported one <see cref="InwardOffset"/> inside the boundary.
+    /// Only relative mode pins the accumulator, because absolute and HOTAS input stay vanilla.
+    /// </summary>
     public static ThrottleBoundaryHoldResult Apply(in ThrottleBoundaryHoldInput input)
     {
         if (!input.Enabled || !input.RelativeThrottleMode || !input.ControlsEnabled ||

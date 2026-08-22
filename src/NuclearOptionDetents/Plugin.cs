@@ -19,6 +19,7 @@ public sealed class Plugin : BaseUnityPlugin
     private DetentHudIndicator? _hudIndicator;
     private bool _hudFailureLogged;
 
+    /// <summary>Config, patches, and HUD are installed independently: a HUD failure logs once and leaves the detents running.</summary>
     private void Awake()
     {
         var modConfig = new ModConfig(Config);
@@ -48,6 +49,10 @@ public sealed class Plugin : BaseUnityPlugin
             $"split airbrake={_patchInstaller.SplitAirbrakeGate}; afterburner={_patchInstaller.AfterburnerGate}.");
     }
 
+    /// <summary>
+    /// Kept out of <see cref="Awake"/> and un-inlined so a missing TextMeshPro or HUD type fails when this
+    /// method is called rather than when the plugin is first loaded.
+    /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void InitializeHudIndicator()
     {
@@ -66,6 +71,7 @@ public sealed class Plugin : BaseUnityPlugin
         _patchInstaller?.Uninstall();
     }
 
+    /// <summary>Renders after the game's HUD has updated for the frame; a throw tears down the indicator and is logged only once.</summary>
     private void LateUpdate()
     {
         try
@@ -83,6 +89,7 @@ public sealed class Plugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>Scene changes destroy the cloned HUD label, so both the indicator and the detent state start over.</summary>
     private void HandleActiveSceneChanged(Scene previous, Scene current)
     {
         _hudIndicator?.Reset();

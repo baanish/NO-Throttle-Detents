@@ -8,6 +8,11 @@ using UnityEngine;
 
 namespace NuclearOptionDetents.Core;
 
+/// <summary>
+/// Single owner of the local pilot's detent state. Harmony patches only report what they saw here,
+/// which keeps every gating decision (preset, live components, player settings, hold timers) in one place
+/// and keeps remote aircraft out of it entirely.
+/// </summary>
 internal static class RuntimeController
 {
     private static ModConfig? _config;
@@ -55,6 +60,7 @@ internal static class RuntimeController
     private static bool _afterburnerGateActive;
     private static readonly HashSet<string> ReportedFailures = new();
 
+    /// <summary>Called once at plugin load; the reset leaves the runtime in the same state as leaving an aircraft.</summary>
     public static void Initialize(ModConfig config, ManualLogSource log)
     {
         _config = config;
@@ -63,6 +69,7 @@ internal static class RuntimeController
         ResetAll("initialization");
     }
 
+    /// <summary>Status line for the config UI. Never throws: a failed check reports caution rather than breaking the settings window.</summary>
     public static RuntimeReadinessResult BestEffortReadiness
     {
         get
@@ -101,8 +108,10 @@ internal static class RuntimeController
     public static string CurrentAircraftDisplayName =>
         string.IsNullOrWhiteSpace(_airframeName) ? "No aircraft" : _airframeName;
 
+    /// <summary>Last evaluated HUD state; hidden whenever the runtime resets, so a stale line cannot survive an aircraft or scene change.</summary>
     public static DetentIndicatorSnapshot IndicatorSnapshot => _indicator;
 
+    /// <summary>Records which patches actually installed; a gate whose patch is missing never claims to be active.</summary>
     public static void SetPatchStatus(
         bool throttleObserverActive,
         bool airbrakeComponentGateActive,
@@ -117,6 +126,14 @@ internal static class RuntimeController
         RefreshApplicableCapabilities();
     }
 
+    /// <summary>
+    /// The per-frame entry point: resolves the local aircraft, applies throttle sensitivity, advances the
+    /// detent state machine, pins the boundary hold, and publishes the HUD snapshot.
+    /// <paramref name="externalRelativeThrottleIntegrator"/> means another mod replaced vanilla's throttle
+    /// integration this frame; detents then run only if that mod is known to keep vanilla's signed
+    /// accumulator (<paramref name="externalUsesSignedMapping"/>), because pinning an unknown mapping
+    /// would move the throttle somewhere the player did not ask for.
+    /// </summary>
     public static void ObserveThrottle(
         PilotPlayerState state,
         bool externalRelativeThrottleIntegrator,
@@ -292,6 +309,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Covers frames the throttle observer missed: if controls are interrupted, pending holds are cancelled instead of resuming mid-count.</summary>
     public static void ObserveControlFrame(PilotPlayerState state)
     {
         if (!ReferenceEquals(_localState, state) || _lastObservedFrame == Time.frameCount)
@@ -311,6 +329,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Suppresses the local aircraft's airbrake only while the idle detent is holding at zero throttle; anything unconfirmed returns false and stays vanilla.</summary>
     public static bool ShouldInhibitAirbrake(Airbrake airbrake, ControlInputs inputs, float originalThrottle)
     {
         try
@@ -342,6 +361,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Confirms the preset's component airbrake exists on the live aircraft; the gate stays inactive until this fires.</summary>
     public static void ObserveAirbrake(Airbrake airbrake)
     {
         if (_activePreset?.AirbrakePath != AirbrakePath.Component ||
@@ -355,6 +375,7 @@ internal static class RuntimeController
         RefreshApplicableCapabilities();
     }
 
+    /// <summary>Split-surface counterpart of <see cref="ShouldInhibitAirbrake"/>, gated on its own patch and live confirmation.</summary>
     public static bool ShouldInhibitSplitAirbrake(
         ControlSurface controlSurface,
         ControlInputs inputs,
@@ -389,6 +410,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Confirms the preset's split airbrake surfaces on the live aircraft.</summary>
     public static void ObserveSplitAirbrake(ControlSurface controlSurface)
     {
         if (_activePreset?.AirbrakePath != AirbrakePath.Split ||
@@ -402,6 +424,11 @@ internal static class RuntimeController
         RefreshApplicableCapabilities();
     }
 
+    /// <summary>
+    /// Collects the local aircraft's nozzles until all expected ones match the preset's afterburner range.
+    /// Only then is the detent boundary retargeted to the confirmed live start, so a mismatched airframe
+    /// keeps vanilla afterburner behavior.
+    /// </summary>
     public static void ObserveAfterburner(JetNozzle nozzle, Aircraft aircraft)
     {
         if (_afterburnerRangeMatchesPreset || _activePreset?.HasAfterburner != true ||
@@ -436,6 +463,7 @@ internal static class RuntimeController
 
     }
 
+    /// <summary>Can only turn an existing vanilla allow into a block for the local aircraft; it never enables afterburner vanilla refused.</summary>
     public static bool ShouldBlockAfterburner(Aircraft aircraft, bool vanillaAllowAfterburner)
     {
         try
@@ -467,6 +495,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Ignores other pilots' states, so only the local player leaving the seat clears the runtime.</summary>
     public static void ResetIfLocalState(PilotPlayerState state)
     {
         if (ReferenceEquals(_localState, state))
@@ -475,6 +504,7 @@ internal static class RuntimeController
         }
     }
 
+    /// <summary>Returns every cached aircraft, capability, throttle, and indicator value to its unattached default; the reason is logged only under debug logging.</summary>
     public static void ResetAll(string reason)
     {
         var shouldLog = !ReferenceEquals(_localState, null) &&
@@ -608,6 +638,7 @@ internal static class RuntimeController
         AirframePresetCatalog.TryGet(_airframeId, out _activePreset!);
     }
 
+    /// <summary>Preset-level eligibility only; live component confirmation is tracked separately in the capability flags.</summary>
     private static bool AirframeAllowsDetents() =>
         AirframePresetCatalog.SupportsDetents(_activePreset, _localCollective);
 

@@ -2,6 +2,7 @@ using System;
 
 namespace NuclearOptionDetents.Config;
 
+/// <summary>Clamped snapshot of the config file; value equality tells the runtime when a live edit needs reconfiguration.</summary>
 internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
 {
     public EffectiveSettings(
@@ -26,6 +27,7 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
     public bool Enabled { get; }
     public bool DebugLogging { get; }
     public bool IndicatorEnabled { get; }
+    /// <summary>Relative-throttle travel multiplier; exactly 1 means vanilla and skips the sensitivity path entirely.</summary>
     public float ThrottleSensitivity { get; }
     public bool IdleEnabled { get; }
     public int IdleHoldMilliseconds { get; }

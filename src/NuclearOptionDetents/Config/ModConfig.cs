@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace NuclearOptionDetents.Config;
 
+/// <summary>Binds the BepInEx config entries and reduces them to an <see cref="EffectiveSettings"/> snapshot the runtime can compare.</summary>
 internal sealed class ModConfig
 {
     private const string StatusSection = "Status";
@@ -128,6 +129,7 @@ internal sealed class ModConfig
     public ConfigEntry<bool> Enabled { get; }
     public ConfigEntry<bool> DebugLogging { get; }
     public ConfigEntry<bool> IndicatorEnabled { get; }
+    /// <summary>Applied only to aircraft with a supported, live detent; every other aircraft stays vanilla, which is why the description points elsewhere for a global sensitivity change.</summary>
     public ConfigEntry<float> ThrottleSensitivity { get; }
     public ConfigEntry<bool> IdleEnabled { get; }
     public ConfigEntry<int> IdleHoldMilliseconds { get; }
@@ -165,6 +167,7 @@ internal sealed class ModConfig
             GUILayout.ExpandWidth(true));
     }
 
+    /// <summary>Clamps every entry on read, so a hand-edited config file cannot push the runtime outside its tested ranges.</summary>
     public EffectiveSettings ReadEffective()
     {
         var epsilon = Clamp(EndpointEpsilon.Value, 0.00001f, 0.05f);
