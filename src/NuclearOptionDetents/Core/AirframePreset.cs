@@ -221,6 +221,16 @@ internal static class AirframePresetCatalog
     }
 
     /// <summary>
+    /// Returns true for a pinned, non-collective aircraft with at least one detent.
+    /// Live component checks still decide whether each individual gate can run.
+    /// </summary>
+    public static bool SupportsDetents(AirframePreset? preset, bool runtimeCollective) =>
+        preset is not null &&
+        !preset.Collective &&
+        !runtimeCollective &&
+        (preset.HasAirbrake || preset.HasAfterburner);
+
+    /// <summary>
     /// Returns true only after the allowlisted preset and live component agree.
     /// This preserves vanilla behavior for unknown, collective, or unsupported systems.
     /// </summary>

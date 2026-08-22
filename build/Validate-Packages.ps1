@@ -63,7 +63,7 @@ function Assert-Package([string]$Path, [ValidateSet('Nomm','PluginOnly','Standal
                 throw 'Standalone BepInEx.cfg must keep HideManagerGameObject=true.'
             }
         }
-        if (@($names | Where-Object { $_ -match '(^|/)Assembly-CSharp.*\.dll$|(^|/)UnityEngine.*\.dll$|(^|/)Rewired_Core\.dll$' })) {
+        if (@($names | Where-Object { $_ -match '(^|/)Assembly-CSharp.*\.dll$|(^|/)UnityEngine.*\.dll$|(^|/)Unity\.TextMeshPro\.dll$|(^|/)Rewired_Core\.dll$' })) {
             throw "$Kind package contains game assemblies."
         }
         [pscustomobject]@{ Kind = $Kind; Files = $names.Count; Bytes = (Get-Item -LiteralPath $Path).Length; Result = 'PASS' }

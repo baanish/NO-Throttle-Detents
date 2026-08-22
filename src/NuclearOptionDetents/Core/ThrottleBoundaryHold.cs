@@ -16,7 +16,7 @@ public readonly struct ThrottleBoundaryHoldInput
         double endpointEpsilon,
         bool enabled = true,
         bool relativeThrottleMode = true,
-        bool throttleUsesNegativeRange = true,
+        SimulatedThrottleRange throttleRange = SimulatedThrottleRange.NegativeOneToOne,
         bool controlsEnabled = true,
         bool paused = false,
         bool axisModifierHeld = false,
@@ -25,10 +25,10 @@ public readonly struct ThrottleBoundaryHoldInput
     {
         (RequestedThrottle, SimulatedThrottle, Command, IdleState, AfterburnerState,
             IdleBoundary, AfterburnerBoundary, EndpointEpsilon, Enabled, RelativeThrottleMode,
-            ThrottleUsesNegativeRange, ControlsEnabled, Paused, AxisModifierHeld, IdleApplies, AfterburnerApplies) =
+            ThrottleRange, ControlsEnabled, Paused, AxisModifierHeld, IdleApplies, AfterburnerApplies) =
             (requestedThrottle, simulatedThrottle, command, idleState, afterburnerState,
                 idleBoundary, afterburnerBoundary, endpointEpsilon, enabled, relativeThrottleMode,
-                throttleUsesNegativeRange, controlsEnabled, paused, axisModifierHeld, idleApplies, afterburnerApplies);
+                throttleRange, controlsEnabled, paused, axisModifierHeld, idleApplies, afterburnerApplies);
     }
 
     public double RequestedThrottle { get; }
@@ -41,7 +41,8 @@ public readonly struct ThrottleBoundaryHoldInput
     public double EndpointEpsilon { get; }
     public bool Enabled { get; }
     public bool RelativeThrottleMode { get; }
-    public bool ThrottleUsesNegativeRange { get; }
+    /// <summary>Range of the accumulator to pin, which follows the player setting or an external integrator's mapping.</summary>
+    public SimulatedThrottleRange ThrottleRange { get; }
     public bool ControlsEnabled { get; }
     public bool Paused { get; }
     public bool AxisModifierHeld { get; }
@@ -81,6 +82,11 @@ public static class ThrottleBoundaryHold
     // without producing a visible gap from idle or full dry power.
     public const double InwardOffset = 0.000001;
 
+    /// <summary>
+    /// Passes throttle through untouched unless a locked boundary applies and the command is still
+    /// pushing into it; then the throttle is reported one <see cref="InwardOffset"/> inside the boundary.
+    /// Only relative mode pins the accumulator, because absolute and HOTAS input stay vanilla.
+    /// </summary>
     public static ThrottleBoundaryHoldResult Apply(in ThrottleBoundaryHoldInput input)
     {
         if (!input.Enabled || !input.RelativeThrottleMode || !input.ControlsEnabled ||
@@ -89,7 +95,7 @@ public static class ThrottleBoundaryHold
             return PassThrough(input);
         }
 
-        var requested = Clamp01(input.RequestedThrottle);
+        var requested = SimulatedThrottleMapping.ClampPublic(input.RequestedThrottle);
         var epsilon = Math.Max(0, input.EndpointEpsilon);
         var holdIdle = input.IdleApplies &&
                        input.IdleState != EndpointDetentState.Unlocked &&
@@ -97,11 +103,11 @@ public static class ThrottleBoundaryHold
                        requested <= input.IdleBoundary + epsilon;
         if (holdIdle)
         {
-            var effective = Clamp01(Math.Max(requested, input.IdleBoundary + InwardOffset));
+            var effective = SimulatedThrottleMapping.ClampPublic(Math.Max(requested, input.IdleBoundary + InwardOffset));
             return new ThrottleBoundaryHoldResult(
                 effective,
                 input.RelativeThrottleMode
-                    ? PublicToSimulated(effective, input.ThrottleUsesNegativeRange)
+                    ? SimulatedThrottleMapping.ToSimulated(effective, input.ThrottleRange)
                     : input.SimulatedThrottle,
                 idleHeld: true,
                 afterburnerHeld: false,
@@ -114,11 +120,11 @@ public static class ThrottleBoundaryHold
                               requested >= input.AfterburnerBoundary - epsilon;
         if (holdAfterburner)
         {
-            var effective = Clamp01(Math.Min(requested, input.AfterburnerBoundary - InwardOffset));
+            var effective = SimulatedThrottleMapping.ClampPublic(Math.Min(requested, input.AfterburnerBoundary - InwardOffset));
             return new ThrottleBoundaryHoldResult(
                 effective,
                 input.RelativeThrottleMode
-                    ? PublicToSimulated(effective, input.ThrottleUsesNegativeRange)
+                    ? SimulatedThrottleMapping.ToSimulated(effective, input.ThrottleRange)
                     : input.SimulatedThrottle,
                 idleHeld: false,
                 afterburnerHeld: true,
@@ -128,27 +134,12 @@ public static class ThrottleBoundaryHold
         return PassThrough(input);
     }
 
-    public static double PublicToSimulated(double publicThrottle, bool throttleUsesNegativeRange)
-    {
-        var normalized = Clamp01(publicThrottle);
-        return throttleUsesNegativeRange ? (normalized * 2) - 1 : normalized;
-    }
-
     private static ThrottleBoundaryHoldResult PassThrough(in ThrottleBoundaryHoldInput input) =>
         new(
-            Clamp01(input.RequestedThrottle),
+            SimulatedThrottleMapping.ClampPublic(input.RequestedThrottle),
             input.SimulatedThrottle,
             idleHeld: false,
             afterburnerHeld: false,
             shouldPinSimulatedThrottle: false);
 
-    private static double Clamp01(double value)
-    {
-        if (double.IsNaN(value))
-        {
-            return 0;
-        }
-
-        return Math.Max(0, Math.Min(1, value));
-    }
 }

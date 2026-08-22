@@ -24,6 +24,8 @@ triggers. Once you've pushed through, the throttle behaves exactly as vanilla
 until you move away from that end again. Both hold times are configurable
 (0 to 2000 ms) and each detent can be disabled.
 
+![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
+
 The mod only touches the local player's relative-throttle input. It
 recognizes 13 aircraft and activates detents on 8 (listed in
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
@@ -32,10 +34,10 @@ unknown aircraft, AI, and remote aircraft are untouched, as are weapons and
 networking. Multiplayer use is unverified, and hosts or server moderators may
 prohibit BepInEx or this mod.
 
-This is a v0.1 prototype. Installed-build notes for contributors are in
+This is a v0.2 prototype. Installed-build notes for contributors are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
-![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.jpg)
+![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.png)
 
 ## Install
 
@@ -82,6 +84,12 @@ The default config is:
 Enabled = true
 DebugLogging = false
 
+[Indicator]
+Enabled = true
+
+[Throttle Sensitivity]
+Multiplier = 1
+
 [Status]
 RuntimeStatus = Open the in-game Configuration Manager to see the live check.
 
@@ -100,7 +108,11 @@ ResetHysteresis = 0.02
 ```
 
 Each detent has its own switch and dwell from 0 to 2000 ms. A zero dwell
-unlocks on the first qualifying endpoint update. `CommandThreshold` is the
+unlocks on the first qualifying endpoint update. The HUD indicator appears
+below the throttle gauge only while a detent is blocking movement. `Multiplier`
+scales relative-throttle movement from 0.25x to 4x on aircraft with a supported
+detent; 1x preserves the game rate. Other aircraft keep vanilla sensitivity.
+`CommandThreshold` is the
 raw input magnitude required to hold; `1.0` requires full-scale input.
 `EndpointEpsilon` tolerates float noise; `ResetHysteresis` controls how far the
 throttle must move away before an unlocked detent relocks and is always at
@@ -110,8 +122,12 @@ when diagnosing a local install.
 The mod does not require Configuration Manager. Text-file changes apply on
 the next launch.
 
-Other mods that rewrite throttle, airbrake, afterburner, or autopilot behavior
-may conflict with these patches. Test them together before relying on either.
+PauelsRandomFixes' ThrottleRelativeVelocity is supported. While that fix is
+active, its Relative Sensitivity setting takes priority and this mod's
+Multiplier is ignored. Other mods that rewrite throttle, airbrake,
+afterburner, or autopilot behavior may still conflict; test them together.
+Use PauelsRandomFixes if you want sensitivity control on aircraft without a
+supported detent.
 
 ## Compatibility and testing
 

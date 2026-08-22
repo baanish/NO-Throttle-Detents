@@ -3,9 +3,9 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>NuclearOptionDetents</AssemblyName>
     <RootNamespace>NuclearOptionDetents</RootNamespace>
-    <Version>0.1.0</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
+    <Version>0.2.0</Version>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <FileVersion>0.2.0.0</FileVersion>
     <Description>Virtual controller throttle detents for Nuclear Option.</Description>
     <Authors>baanish</Authors>
     <Copyright>Copyright (c) 2026 baanish</Copyright>
@@ -43,6 +43,14 @@
       <HintPath>$(GameDir)\NuclearOption_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameDir)\NuclearOption_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameDir)\NuclearOption_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>$(GameDir)\NuclearOption_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
@@ -52,6 +60,7 @@
   <Target Name="ValidateLocalReferences" BeforeTargets="ResolveReferences">
     <Error Condition="'$(GameDir)' == ''" Text="GameDir is required. Run build/Build.ps1 or pass /p:GameDir=&quot;...&quot;." />
     <Error Condition="!Exists('$(GameDir)\NuclearOption_Data\Managed\Assembly-CSharp.dll')" Text="Assembly-CSharp.dll was not found under GameDir '$(GameDir)'." />
+    <Error Condition="!Exists('$(GameDir)\NuclearOption_Data\Managed\Unity.TextMeshPro.dll')" Text="Unity.TextMeshPro.dll was not found under GameDir '$(GameDir)'." />
     <Error Condition="!Exists('$(BepInExRoot)\BepInEx\core\BepInEx.dll')" Text="Pinned BepInEx compile references were not found at '$(BepInExRoot)'. Run build/Build.ps1." />
   </Target>
 </Project>
