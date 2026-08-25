@@ -1,4 +1,5 @@
 using NuclearOptionDetents.Core;
+using NuclearOptionDetents.Diagnostics;
 
 namespace NuclearOptionDetents.Tests;
 
@@ -22,17 +23,20 @@ internal static class Program
             ("zero duration unlocks immediately", ZeroDurationUnlocksImmediately),
             ("disabled detent is transparent", DisabledDetentIsTransparent),
             ("master disabled is vanilla", MasterDisabledIsVanilla),
+            ("Auto Hover bypass restarts a pending hold", AutoHoverBypassRestartsPendingHold),
             ("lifecycle reset clears both", LifecycleResetClearsBoth),
             ("cadence does not change result", CadenceIsIndependent),
             ("pause cancels dwell and passes gates", PausedTimeDoesNotAdvance),
             ("Axis Modifier cancels dwell and passes gates", AxisModifierCancelsHold),
             ("Axis Modifier preserves unlocked latch", AxisModifierPreservesUnlockedLatch),
-            ("observer age policy rejects stale input", ObserverAgePolicyRejectsStaleInput),
             ("disabled controls lock dwell and pass gates", DisabledControlsPreserveLockedGates),
             ("opposite lower command locks dwell and passes gate", OppositeLowerCommandPassesGate),
             ("opposite upper command locks dwell and passes gate", OppositeUpperCommandPassesGate),
             ("locked idle publishes inward throttle", LockedIdlePublishesInwardThrottle),
             ("locked afterburner publishes inward throttle", LockedAfterburnerPublishesInwardThrottle),
+            ("neutral endpoint does not initiate a boundary hold", NeutralEndpointDoesNotInitiateBoundaryHold),
+            ("neutral maintains a float-roundtripped parked hold", NeutralMaintainsFloatRoundtrippedParkedHold),
+            ("boundary offset is pinned for network transport", BoundaryOffsetIsPinnedForNetworkTransport),
             ("early release stays behind boundary", EarlyReleaseStaysBehindBoundary),
             ("exact dwell releases boundary", ExactDwellReleasesBoundary),
             ("negative range accumulator follows held boundary", NegativeRangeAccumulatorFollowsBoundary),
@@ -74,11 +78,6 @@ internal static class Program
             ("collective and runtime collective bypass", CollectiveAndRuntimeCollectiveBypass),
             ("unsupported expected feature bypasses", UnsupportedExpectedFeatureBypasses),
             ("live confirmation is required", LiveConfirmationIsRequired),
-            ("airbrake ownership accepts exact aircraft", AirbrakeOwnershipAcceptsExactAircraft),
-            ("airbrake ownership rejects another aircraft", AirbrakeOwnershipRejectsAnotherAircraft),
-            ("aircraft ownership requires exact identity", AircraftOwnershipRequiresExactIdentity),
-            ("pinned airbrake path confirms capability", PinnedAirbrakePathConfirmsCapability),
-            ("pinned airbrake path requires its active gate", PinnedAirbrakePathRequiresActiveGate),
             ("runtime reconfigure preserves lower holding state", RuntimeReconfigurePreservesLowerHoldingState),
             ("runtime reconfigure preserves upper unlocked state", RuntimeReconfigurePreservesUpperUnlockedState),
             ("afterburner retarget preserves idle state", AfterburnerRetargetPreservesIdleState),
@@ -89,6 +88,7 @@ internal static class Program
             ("sensitivity scales observed vanilla movement", SensitivityScalesObservedVanillaMovement),
             ("vanilla deadzone remains unchanged", VanillaDeadzoneRemainsUnchanged),
             ("unexpected throttle write rebases sensitivity", UnexpectedThrottleWriteRebasesSensitivity),
+            ("foreign throttle writer yields only while active", ForeignThrottleWriterYieldsOnlyWhileActive),
             ("external integrator owns sensitivity", ExternalIntegratorOwnsSensitivity),
             ("non-detent aircraft bypass sensitivity", NonDetentAircraftBypassesSensitivity),
             ("indicator hides when boundary hold bypasses", IndicatorHidesWhenBoundaryHoldBypasses),
@@ -99,6 +99,10 @@ internal static class Program
             ("indicator text formats idle hold", IndicatorTextFormatsIdleHold),
             ("indicator text formats afterburner lock", IndicatorTextFormatsAfterburnerLock),
             ("indicator text prefers idle if both are visible", IndicatorTextPrefersIdle),
+            ("network validation always observes local", NetworkValidationAlwaysObservesLocal),
+            ("network validation requires a selected remote", NetworkValidationRequiresSelectedRemote),
+            ("network validation observes only the selected remote", NetworkValidationObservesOnlySelectedRemote),
+            ("network validation volume is capped", NetworkValidationVolumeIsCapped),
         };
 
         int failures = 0;
@@ -118,6 +122,29 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void NetworkValidationAlwaysObservesLocal()
+    {
+        True(NetworkValidationSelection.ShouldObserve(local: true, owner: 30, requestedRemoteOwner: -1));
+        True(NetworkValidationSelection.ShouldObserve(local: true, owner: 30, requestedRemoteOwner: 8));
+    }
+
+    private static void NetworkValidationRequiresSelectedRemote()
+    {
+        False(NetworkValidationSelection.ShouldObserve(local: false, owner: 8, requestedRemoteOwner: -1));
+    }
+
+    private static void NetworkValidationObservesOnlySelectedRemote()
+    {
+        True(NetworkValidationSelection.ShouldObserve(local: false, owner: 8, requestedRemoteOwner: 8));
+        False(NetworkValidationSelection.ShouldObserve(local: false, owner: 3, requestedRemoteOwner: 8));
+    }
+
+    private static void NetworkValidationVolumeIsCapped()
+    {
+        Equal(2, NetworkValidationSelection.MaximumObservedAircraft);
+        Equal(10, NetworkValidationSelection.SamplesPerSecond);
     }
 
     private static EndpointDetent Lower(double milliseconds = 200)
@@ -274,6 +301,25 @@ internal static class Program
         True(result.AfterburnerUnlocked);
     }
 
+    private static void AutoHoverBypassRestartsPendingHold()
+    {
+        var runtime = new DetentRuntime(200, 200);
+        runtime.Update(new DetentRuntimeInput(0, 0, ThrottleCommand.Decrease));
+        runtime.Update(new DetentRuntimeInput(0.1, 0, ThrottleCommand.Decrease));
+
+        var bypassed = runtime.Update(new DetentRuntimeInput(
+            0.15,
+            0.4,
+            ThrottleCommand.Neutral,
+            masterEnabled: false));
+        True(bypassed.IsBypassed);
+        Equal(EndpointDetentState.Unlocked, bypassed.IdleState);
+
+        var resumed = runtime.Update(new DetentRuntimeInput(1, 0, ThrottleCommand.Decrease));
+        Equal(EndpointDetentState.Holding, resumed.IdleState);
+        Near(0, resumed.IdleElapsedSeconds);
+    }
+
     private static void LifecycleResetClearsBoth()
     {
         var runtime = new DetentRuntime();
@@ -393,26 +439,6 @@ internal static class Program
         False(result.AirbrakeInhibited);
     }
 
-    private static void ObserverAgePolicyRejectsStaleInput()
-    {
-        True(ComponentGatePolicy.AllowsBlock(
-            controlsEnabled: true,
-            paused: false,
-            axisModifierHeld: false,
-            command: ThrottleCommand.Decrease,
-            direction: DetentDirection.Lower,
-            observerAgeSeconds: ComponentGatePolicy.MaximumObserverAgeSeconds));
-
-        False(ComponentGatePolicy.AllowsBlock(
-            controlsEnabled: true,
-            paused: false,
-            axisModifierHeld: false,
-            command: ThrottleCommand.Decrease,
-            direction: DetentDirection.Lower,
-            observerAgeSeconds: ComponentGatePolicy.MaximumObserverAgeSeconds + 0.001));
-
-    }
-
     private static void DisabledControlsPreserveLockedGates()
     {
         var runtime = new DetentRuntime();
@@ -457,7 +483,7 @@ internal static class Program
     private static void LockedIdlePublishesInwardThrottle()
     {
         var result = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
-            0, -1, ThrottleCommand.Neutral,
+            0, -1, ThrottleCommand.Decrease,
             EndpointDetentState.Locked, EndpointDetentState.Locked,
             0, 0.9, 0.001,
             afterburnerApplies: false));
@@ -476,6 +502,56 @@ internal static class Program
         Near(0.9 - ThrottleBoundaryHold.InwardOffset, result.EffectiveThrottle);
         False(result.IdleHeld);
         True(result.AfterburnerHeld);
+    }
+
+    private static void NeutralEndpointDoesNotInitiateBoundaryHold()
+    {
+        var idle = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
+            0, -1, ThrottleCommand.Neutral,
+            EndpointDetentState.Locked, EndpointDetentState.Locked,
+            0, 0.9, 0.001,
+            afterburnerApplies: false));
+        Near(0, idle.EffectiveThrottle);
+        False(idle.IsHeld);
+
+        var afterburner = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
+            1, 1, ThrottleCommand.Neutral,
+            EndpointDetentState.Locked, EndpointDetentState.Locked,
+            0, 0.9, 0.001,
+            idleApplies: false));
+        Near(1, afterburner.EffectiveThrottle);
+        False(afterburner.IsHeld);
+    }
+
+    private static void BoundaryOffsetIsPinnedForNetworkTransport()
+    {
+        Near(0.0001, ThrottleBoundaryHold.InwardOffset);
+        var idlePin = (Half)ThrottleBoundaryHold.InwardOffset;
+        var idleBits = (ushort)BitConverter.HalfToInt16Bits(idlePin);
+        True((idleBits & 0x7c00) != 0);
+        True((double)idlePin > 0);
+
+        var afterburnerPin = (Half)(0.9 - ThrottleBoundaryHold.InwardOffset);
+        True((double)afterburnerPin < 0.9);
+    }
+
+    private static void NeutralMaintainsFloatRoundtrippedParkedHold()
+    {
+        var simulated = (float)SimulatedThrottleMapping.ToSimulated(
+            ThrottleBoundaryHold.InwardOffset,
+            SimulatedThrottleRange.NegativeOneToOne);
+        var requested = (float)SimulatedThrottleMapping.ToPublic(
+            simulated,
+            SimulatedThrottleRange.NegativeOneToOne);
+        var result = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
+            requested, simulated, ThrottleCommand.Neutral,
+            EndpointDetentState.Locked, EndpointDetentState.Locked,
+            0, 0.9, 0.001,
+            afterburnerApplies: false,
+            throttleRange: SimulatedThrottleRange.NegativeOneToOne));
+
+        True(result.IdleHeld);
+        Near(ThrottleBoundaryHold.InwardOffset, result.EffectiveThrottle);
     }
 
     private static void EarlyReleaseStaysBehindBoundary()
@@ -522,7 +598,7 @@ internal static class Program
             0, 0.9, 0.001,
             throttleRange: SimulatedThrottleRange.NegativeOneToOne,
             idleApplies: false));
-        Near(0.799998, result.SimulatedThrottle);
+        Near((0.9 - ThrottleBoundaryHold.InwardOffset) * 2 - 1, result.SimulatedThrottle);
     }
 
     private static void NonnegativeAccumulatorFollowsBoundary()
@@ -533,7 +609,7 @@ internal static class Program
             0, 0.9, 0.001,
             throttleRange: SimulatedThrottleRange.ZeroToOne,
             idleApplies: false));
-        Near(0.899999, result.SimulatedThrottle);
+        Near(0.9 - ThrottleBoundaryHold.InwardOffset, result.SimulatedThrottle);
     }
 
     private static void AbsoluteThrottleBypassesBoundaryHold()
@@ -601,7 +677,7 @@ internal static class Program
             0, 0.9, 0.05,
             afterburnerApplies: false));
         Near(0.03, result.EffectiveThrottle);
-        True(result.IdleHeld);
+        False(result.IdleHeld);
     }
 
     private static void LargeEpsilonPreservesSafeDryThrustRequest()
@@ -612,7 +688,7 @@ internal static class Program
             0, 0.9, 0.05,
             idleApplies: false));
         Near(0.85, result.EffectiveThrottle);
-        True(result.AfterburnerHeld);
+        False(result.AfterburnerHeld);
     }
 
     private static void CollectiveInversionReversesCommandDirection()
@@ -716,6 +792,41 @@ internal static class Program
     private static void UnexpectedThrottleWriteRebasesSensitivity()
     {
         Near(0.7, RelativeThrottleSensitivity.Apply(0.4, 0.7, 1, 0.016, 4, enabled: true));
+    }
+
+    private static void ForeignThrottleWriterYieldsOnlyWhileActive()
+    {
+        False(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: false,
+            publicThrottle: 1,
+            simulatedThrottle: 0,
+            SimulatedThrottleRange.NegativeOneToOne));
+        False(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: true,
+            publicThrottle: 0.5,
+            simulatedThrottle: 0,
+            SimulatedThrottleRange.NegativeOneToOne));
+        False(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: true,
+            publicThrottle: 0,
+            simulatedThrottle: -0.4,
+            SimulatedThrottleRange.ZeroToOne));
+        False(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: true,
+            publicThrottle: 0.5009,
+            simulatedThrottle: 0,
+            SimulatedThrottleRange.NegativeOneToOne));
+        True(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: true,
+            publicThrottle: 0.5011,
+            simulatedThrottle: 0,
+            SimulatedThrottleRange.NegativeOneToOne));
+        False(ThrottleOutputOwnership.IsForeignControlActive(
+            foreignThrottlePatchPresent: true,
+            publicThrottle: 1,
+            simulatedThrottle: -1,
+            SimulatedThrottleRange.NegativeOneToOne,
+            invertOutput: true));
     }
 
     private static void ExternalIntegratorOwnsSensitivity()
@@ -1136,80 +1247,6 @@ internal static class Program
         False(AirframePresetCatalog.CanGate(jet, AirframeFeature.Airbrake, runtimeCollective: false, liveFeatureConfirmed: false));
         True(AirframePresetCatalog.CanGate(jet, AirframeFeature.Airbrake, runtimeCollective: false, liveFeatureConfirmed: true));
         True(AirframePresetCatalog.CanGate(jet, AirframeFeature.Afterburner, runtimeCollective: false, liveFeatureConfirmed: true));
-    }
-
-    private static void AirbrakeOwnershipAcceptsExactAircraft()
-    {
-        var localAircraft = new object();
-
-        True(ReferenceOwnership.AirbrakeMatches(
-            localAircraft,
-            serializedAircraft: localAircraft,
-            attachedAircraft: null));
-        True(ReferenceOwnership.AirbrakeMatches(
-            localAircraft,
-            serializedAircraft: null,
-            attachedAircraft: localAircraft));
-    }
-
-    private static void AirbrakeOwnershipRejectsAnotherAircraft()
-    {
-        var localAircraft = new object();
-        var otherAircraft = new object();
-
-        False(ReferenceOwnership.AirbrakeMatches(
-            localAircraft,
-            serializedAircraft: otherAircraft,
-            attachedAircraft: otherAircraft));
-    }
-
-    private static void AircraftOwnershipRequiresExactIdentity()
-    {
-        var localAircraft = new object();
-
-        True(ReferenceOwnership.AircraftMatches(
-            localAircraft,
-            candidateAircraft: localAircraft));
-        False(ReferenceOwnership.AircraftMatches(
-            localAircraft,
-            candidateAircraft: new object()));
-        False(ReferenceOwnership.AircraftMatches(
-            localAircraft,
-            candidateAircraft: null));
-    }
-
-    private static void PinnedAirbrakePathConfirmsCapability()
-    {
-        True(AirbrakeCapabilityPaths.IsConfirmed(
-            AirbrakePath.Component, componentConfirmed: true, splitSurfaceConfirmed: false));
-        False(AirbrakeCapabilityPaths.IsConfirmed(
-            AirbrakePath.Component, componentConfirmed: false, splitSurfaceConfirmed: true));
-        True(AirbrakeCapabilityPaths.IsConfirmed(
-            AirbrakePath.Split, componentConfirmed: false, splitSurfaceConfirmed: true));
-        False(AirbrakeCapabilityPaths.IsConfirmed(
-            AirbrakePath.None, componentConfirmed: true, splitSurfaceConfirmed: true));
-    }
-
-    private static void PinnedAirbrakePathRequiresActiveGate()
-    {
-        True(AirbrakeCapabilityPaths.HasActiveGate(
-            AirbrakePath.Component,
-            componentConfirmed: true,
-            componentGateActive: true,
-            splitSurfaceConfirmed: false,
-            splitSurfaceGateActive: false));
-        True(AirbrakeCapabilityPaths.HasActiveGate(
-            AirbrakePath.Split,
-            componentConfirmed: false,
-            componentGateActive: false,
-            splitSurfaceConfirmed: true,
-            splitSurfaceGateActive: true));
-        False(AirbrakeCapabilityPaths.HasActiveGate(
-            AirbrakePath.Component,
-            componentConfirmed: true,
-            componentGateActive: false,
-            splitSurfaceConfirmed: false,
-            splitSurfaceGateActive: true));
     }
 
     private static void RuntimeReconfigurePreservesLowerHoldingState()

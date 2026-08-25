@@ -16,9 +16,6 @@ updates. After a game update, recheck these targets and run the mod.
 
 - Throttle observer: `System.Void PilotPlayerState::PlayerThrottleAxis1Controls()`
 - Skipped-throttle interruption observer: `System.Void PilotPlayerState::PlayerControls()`
-- Airbrake gate: `System.Void Airbrake::Update()`
-- Split-airbrake gate: `System.Void ControlSurface::UpdateJobFields()`
-- Afterburner gate: `System.Void JetNozzle::Thrust(System.Single thrustAmount, System.Single rpmRatio, System.Single thrustRatio, System.Single throttle, System.Boolean allowAfterburner)`
 - Pilot-state reset: `System.Void PilotPlayerState::LeaveState()`
 - Aircraft input field: `ControlInputs Aircraft::controlInputs`
 - Throttle field: `System.Single ControlInputs::throttle`
@@ -32,24 +29,32 @@ updates. After a game update, recheck these targets and run the mod.
 - Pilot collective field: `System.Boolean PilotPlayerState::collective`
 - Pilot control-strength field: `System.Single PilotPlayerState::pilotStrength`
 - Pilot simulated-throttle field: `System.Single PilotPlayerState::simulatedThrottle`
+- Local-aircraft check: `System.Boolean GameManager::IsLocalAircraft(Aircraft)`
+- Auto Hover check: `System.Boolean Aircraft::IsAutoHoverEnabled()`
 - Airframe identity route: `UnitDefinition Unit::definition` -> `System.String UnitDefinition::jsonKey` / `System.String UnitDefinition::unitName`
-- Airbrake control input field: `ControlInputs Airbrake::controlInputs`
-- Airbrake aircraft fields: `Aircraft Airbrake::aircraft`, `Aircraft Airbrake::attachedAircraft`
-- JetNozzle aircraft field: `Aircraft JetNozzle::aircraft`
+- Airbrake owner fields: `Aircraft Airbrake::aircraft`, `Aircraft Airbrake::attachedAircraft`
+- ControlSurface owner field: `Aircraft ControlSurface::aircraft`
+- JetNozzle owner field: `Aircraft JetNozzle::aircraft`
 - JetNozzle afterburners field: `JetNozzle/Afterburner[] JetNozzle::afterburners`
 - Afterburner throttle range fields: `System.Single JetNozzle/Afterburner::throttleStart`, `System.Single JetNozzle/Afterburner::throttleEnd`
 - GameManager flight-controls field: `System.Boolean GameManager::flightControlsEnabled`
 - PlayerSettings relative-throttle field: `System.Boolean PlayerSettings::throttleUseRelative`
 - PlayerSettings invert-collective field: `System.Boolean PlayerSettings::invertCollective`
 - PlayerSettings throttle-negative field: `System.Boolean PlayerSettings::throttleUseNegative`
-- ControlSurface aircraft field: `Aircraft ControlSurface::aircraft`
-- ControlSurface control-input field: `ControlInputs ControlSurface::controlInputs`
 - ControlSurface max-split field: `System.Single ControlSurface::maxSplit`
-- ControlSurface job fields control-input field: `NuclearOption.Jobs.ControlInputsBurst NuclearOption.Jobs.ControlSurfaceFields::controlInputs`
-- ControlSurface job fields max-split field: `System.Single NuclearOption.Jobs.ControlSurfaceFields::maxSplit`
-- ControlSurface job execute: `System.Void NuclearOption.Jobs.ControlSurfaceJob_Math::Execute(NuclearOption.Jobs.ControlSurfaceFields& fields, UnityEngine.Quaternion& mainRotation, System.Int32 upperIndex, System.Int32 lowerIndex)`
 - Flight HUD center: `UnityEngine.Transform FlightHud::GetHUDCenter()`
 - Flight HUD throttle label: `TMPro.TextMeshProUGUI ThrottleGauge::throttleLabel`
+
+Network Validation also reads the public owner route on human aircraft plus
+`Airbrake.active`, `Airbrake.openAmount`, `ControlSurface.splitAmount`, and
+`JetNozzle/Afterburner.afterburnerAmount`. Only the local aircraft and one
+configured remote are sampled, and only while both diagnostic switches are
+enabled. The diagnostic does not patch network transport or write aircraft
+state.
+
+The owner route is `NuclearOption.Networking.Player Aircraft::Player`,
+`System.Int32 Player::PlayerIndex`, `Aircraft Player::Aircraft`, and the
+inherited `System.Boolean Mirage.NetworkBehaviour::IsLocalPlayer` property.
 
 ## Throttle mapping
 
@@ -65,3 +70,13 @@ follows. With `throttleUseNegative = false`, the public value equals
   reads `Pilot.aircraft`, but does not assign the inherited
   `PilotBaseState.aircraft`. The local-aircraft route is therefore
   `PilotBaseState.pilot` -> `Pilot.aircraft`.
+
+## Other throttle mods
+
+The throttle observer records whether another Harmony owner patches
+`PlayerThrottleAxis1Controls()`. Detents yields when such a patch actively
+publishes a public throttle value that differs from the game's relative
+accumulator. It refreshes the owner list when the player leaves a seat instead
+of reading Harmony's patch table every frame. PauelsRandomFixes' verified
+replacement remains the explicit exception because its signed accumulator
+mapping is supported.

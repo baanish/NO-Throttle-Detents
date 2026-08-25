@@ -10,7 +10,8 @@ aircraft without a matching system remain vanilla.
 
 NOMM manages installation, updates, enabling, disabling, and removal. BepInEx
 creates com.baanish.nuclearoption.detents.cfg on first launch. Debug logging is
-off by default. BepInEx Configuration Manager is optional.
+off by default, as is Network Validation. BepInEx Configuration Manager is
+optional. Auto Hover temporarily bypasses detents and sensitivity.
 
 The sensitivity multiplier covers aircraft with a supported detent. Use
 PauelsRandomFixes for other aircraft; when active, it owns sensitivity. Other

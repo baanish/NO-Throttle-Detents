@@ -58,6 +58,9 @@ function Assert-Package([string]$Path, [ValidateSet('Nomm','PluginOnly','Standal
             if ($config -notmatch '(?m)^\s*DebugLogging\s*=\s*false\s*(?:;.*)?$') {
                 throw 'Standalone detents config must keep DebugLogging=false.'
             }
+            if ($config -notmatch '(?m)^\s*NetworkValidation\s*=\s*false\s*(?:;.*)?$') {
+                throw 'Standalone detents config must keep NetworkValidation=false.'
+            }
             $bepConfig = Read-Entry $archive 'BepInEx/config/BepInEx.cfg'
             if ($bepConfig -notmatch '(?m)^\s*HideManagerGameObject\s*=\s*true\s*(?:;.*)?$') {
                 throw 'Standalone BepInEx.cfg must keep HideManagerGameObject=true.'

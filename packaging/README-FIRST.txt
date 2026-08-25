@@ -4,11 +4,7 @@ Multiplayer use is unverified; hosts or server moderators may prohibit BepInEx
 or this mod.
 
 This is the standalone fresh-install package. It includes BepInEx 5.4.23.5.
-This is the v@VERSION@ release package. Recorded v0.1 testing covered identity
-and readiness on all 13 allowlisted airframes plus reduced-dwell upper/lower
-control-path checks on FS-12, FS-20, KR-67, and AB-4. The runtime received a
-manual flight check before an identity-only rebuild; detent logic did not
-change. The packaged default has DebugLogging off.
+The packaged defaults have Debug Logging and Network Validation off.
 
 INSTALL
 
@@ -34,7 +30,7 @@ increase for 200 ms before afterburner is allowed. Releasing early resets the
 hold. A small indicator shows active locks. Relative-throttle sensitivity is
 configurable on aircraft with a supported detent; use PauelsRandomFixes for
 other aircraft. Relative throttle mode is required; absolute/HOTAS mode remains vanilla
-in version @VERSION@.
+in version @VERSION@. Auto Hover temporarily bypasses detents and sensitivity.
 
 EXISTING BEPINEX INSTALLATION
 
@@ -46,10 +42,9 @@ TROUBLESHOOTING
 
 If BepInEx\LogOutput.log does not exist, check for an extra wrapper folder and
 check whether security software quarantined winhttp.dll. The plugin writes one
-aggregate load line listing the four patch statuses. If a target is unavailable,
-that feature is reported unavailable and leaves the corresponding vanilla path
-unchanged. Other throttle or autopilot mods may conflict. A game update can
-make one patch unavailable.
+load line with its throttle-patch status. If the target is unavailable, the mod
+leaves throttle behavior unchanged. Other throttle or autopilot mods may
+conflict. A game update can make the patch unavailable.
 
 UNINSTALL OR DISABLE
 

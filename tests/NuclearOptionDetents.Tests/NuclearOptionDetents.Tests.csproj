@@ -11,16 +11,15 @@
     <Compile Include="..\..\src\NuclearOptionDetents\Core\EndpointDetent.cs" Link="Core\EndpointDetent.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentRuntime.cs" Link="Core\DetentRuntime.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleCommand.cs" Link="Core\ThrottleCommand.cs" />
-    <Compile Include="..\..\src\NuclearOptionDetents\Core\ComponentGatePolicy.cs" Link="Core\ComponentGatePolicy.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleBoundaryHold.cs" Link="Core\ThrottleBoundaryHold.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\RuntimeReadiness.cs" Link="Core\RuntimeReadiness.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\AirframePreset.cs" Link="Core\AirframePreset.cs" />
-    <Compile Include="..\..\src\NuclearOptionDetents\Core\ReferenceOwnership.cs" Link="Core\ReferenceOwnership.cs" />
-    <Compile Include="..\..\src\NuclearOptionDetents\Core\AirbrakeCapabilityPaths.cs" Link="Core\AirbrakeCapabilityPaths.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentTiming.cs" Link="Core\DetentTiming.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentIndicator.cs" Link="Core\DetentIndicator.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\RelativeThrottleSensitivity.cs" Link="Core\RelativeThrottleSensitivity.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\SimulatedThrottleMapping.cs" Link="Core\SimulatedThrottleMapping.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleOutputOwnership.cs" Link="Core\ThrottleOutputOwnership.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Config\EffectiveSettings.cs" Link="Config\EffectiveSettings.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Diagnostics\NetworkValidationSelection.cs" Link="Diagnostics\NetworkValidationSelection.cs" />
   </ItemGroup>
 </Project>

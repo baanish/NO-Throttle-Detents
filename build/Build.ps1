@@ -37,6 +37,13 @@ if (-not $debugLoggingMatch.Success) { throw 'DebugLogging config binding was no
 if ($debugLoggingMatch.Groups['value'].Value -ne 'false') {
     throw 'DebugLogging source default must be false.'
 }
+$networkValidationMatch = [regex]::Match(
+    [IO.File]::ReadAllText($configSource),
+    '(?s)NetworkValidation\s*=\s*config\.Bind\(.*?"NetworkValidation"\s*,\s*(?<value>true|false)\s*,')
+if (-not $networkValidationMatch.Success) { throw 'NetworkValidation config binding was not found.' }
+if ($networkValidationMatch.Groups['value'].Value -ne 'false') {
+    throw 'NetworkValidation source default must be false.'
+}
 
 function Invoke-DotNet([string[]]$Arguments) {
     & $script:dotnet @Arguments
@@ -106,6 +113,8 @@ New-Item -ItemType Directory -Force -Path $dist, $artifacts | Out-Null
 Invoke-DotNet @('restore', $testsProject, '--nologo')
 Invoke-DotNet @('restore', $pluginProject, '--nologo')
 Invoke-DotNet @('run', '--project', $testsProject, '--configuration', 'Release', '--no-restore')
+& (Join-Path $root 'tools\Test-NetworkValidation.ps1') -SelfTest
+if ($LASTEXITCODE -ne 0) { throw 'Network validation analyzer self-test failed.' }
 
 $pluginOutput = Join-Path $artifacts 'plugin'
 New-Item -ItemType Directory -Force -Path $pluginOutput | Out-Null

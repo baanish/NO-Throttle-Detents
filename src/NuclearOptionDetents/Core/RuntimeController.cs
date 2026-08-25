@@ -15,6 +15,8 @@ namespace NuclearOptionDetents.Core;
 /// </summary>
 internal static class RuntimeController
 {
+    private const int MaxCapabilityDiscoveryAttempts = 12;
+    private const float CapabilityDiscoveryRetrySeconds = 0.25f;
     private static ModConfig? _config;
     private static ManualLogSource? _log;
     private static DetentRuntime _runtime = new();
@@ -39,25 +41,16 @@ internal static class RuntimeController
     private static float _liveAfterburnerStart;
     private static float _liveAfterburnerEnd;
     private static bool _afterburnerRangeMatchesPreset;
-    private static int _airbrakeConfirmedFrame = -1;
-    private static int _afterburnerConfirmedFrame = -1;
     private static bool _hasAirbrake;
     private static bool _hasAfterburner;
+    private static int _capabilityDiscoveryAttempts;
+    private static float _nextCapabilityDiscoveryTime;
     private static int _lastObservedFrame = -1;
-    private static float _lastObservedSimulationTime;
-    private static bool _hasLastObservedSimulationTime;
-    private static int _componentGateInputFrame = -1;
-    private static bool _componentGateInputValid;
-    private static bool _componentGateControlsEnabled;
-    private static bool _componentGatePaused;
-    private static bool _componentGateAxisModifierHeld;
-    private static ThrottleCommand _componentGateCommand;
     private static bool _patchStatusKnown;
     private static bool _throttleObserverActive;
-    private static bool _airbrakeComponentGateActive;
-    private static bool _splitAirbrakeGateActive;
     private static bool _idleGateActive;
     private static bool _afterburnerGateActive;
+    private static bool _foreignThrottleBypassActive;
     private static readonly HashSet<string> ReportedFailures = new();
 
     /// <summary>Called once at plugin load; the reset leaves the runtime in the same state as leaving an aircraft.</summary>
@@ -110,18 +103,15 @@ internal static class RuntimeController
 
     /// <summary>Last evaluated HUD state; hidden whenever the runtime resets, so a stale line cannot survive an aircraft or scene change.</summary>
     public static DetentIndicatorSnapshot IndicatorSnapshot => _indicator;
+    internal static Aircraft? LocalAircraft => _localAircraft;
+    internal static DetentRuntimeSnapshot DetentSnapshot => _runtime.Snapshot;
+    internal static bool HasEffectiveSimulatedThrottle => _hasEffectiveSimulatedThrottle;
+    internal static double EffectiveSimulatedThrottle => _effectiveSimulatedThrottle;
 
     /// <summary>Records which patches actually installed; a gate whose patch is missing never claims to be active.</summary>
-    public static void SetPatchStatus(
-        bool throttleObserverActive,
-        bool airbrakeComponentGateActive,
-        bool splitAirbrakeGateActive,
-        bool afterburnerGateActive)
+    public static void SetPatchStatus(bool throttleObserverActive)
     {
         _throttleObserverActive = throttleObserverActive;
-        _airbrakeComponentGateActive = airbrakeComponentGateActive;
-        _splitAirbrakeGateActive = splitAirbrakeGateActive;
-        _afterburnerGateActive = afterburnerGateActive;
         _patchStatusKnown = true;
         RefreshApplicableCapabilities();
     }
@@ -133,11 +123,14 @@ internal static class RuntimeController
     /// integration this frame; detents then run only if that mod is known to keep vanilla's signed
     /// accumulator (<paramref name="externalUsesSignedMapping"/>), because pinning an unknown mapping
     /// would move the throttle somewhere the player did not ask for.
+    /// <paramref name="foreignThrottlePatchPresent"/> allows the runtime to yield only while a foreign
+    /// postfix or transpiler is actually publishing a value outside that accumulator.
     /// </summary>
     public static void ObserveThrottle(
         PilotPlayerState state,
         bool externalRelativeThrottleIntegrator,
-        bool externalUsesSignedMapping)
+        bool externalUsesSignedMapping,
+        bool foreignThrottlePatchPresent)
     {
         try
         {
@@ -147,8 +140,11 @@ internal static class RuntimeController
             var aircraftAccessor = RuntimeCompatibility.PilotOwnedAircraft;
             var inputsAccessor = RuntimeCompatibility.PilotControlInputs;
             var simulatedThrottleAccessor = RuntimeCompatibility.PilotSimulatedThrottle;
+            var autoHoverAccessor = RuntimeCompatibility.AircraftAutoHoverEnabled;
+            var localAircraftAccessor = RuntimeCompatibility.IsLocalAircraft;
             if (playerAccessor is null || collectiveAccessor is null || pilotAccessor is null ||
-                aircraftAccessor is null || inputsAccessor is null || simulatedThrottleAccessor is null)
+                aircraftAccessor is null || inputsAccessor is null || simulatedThrottleAccessor is null ||
+                autoHoverAccessor is null || localAircraftAccessor is null)
             {
                 ResetAll("throttle accessors unavailable");
                 return;
@@ -162,6 +158,11 @@ internal static class RuntimeController
             if (ReferenceEquals(player, null) || !IsLiveUnityObject(aircraft) || ReferenceEquals(inputs, null))
             {
                 ResetAll("local input reference lost");
+                return;
+            }
+            if (!localAircraftAccessor(aircraft!))
+            {
+                ResetAll("throttle observer was not attached to the local aircraft");
                 return;
             }
 
@@ -178,12 +179,12 @@ internal static class RuntimeController
                 _localInputs = inputs;
                 _localCollective = collective;
                 _lastObservedFrame = -1;
-                _lastObservedSimulationTime = 0f;
-                _hasLastObservedSimulationTime = false;
                 _hasEffectiveSimulatedThrottle = false;
                 _indicator = DetentIndicatorSnapshot.Hidden;
                 ResolveAirframePreset(aircraft!);
                 ResetAircraftCapabilities();
+                DiscoverLocalCapabilities(aircraft!);
+                _nextCapabilityDiscoveryTime = simulationTime + CapabilityDiscoveryRetrySeconds;
                 RefreshApplicableCapabilities();
                 RebuildRuntime(settings);
                 _runtime.ObserveContext(aircraft, inputs);
@@ -193,6 +194,21 @@ internal static class RuntimeController
                         $"Detents attached to {_airframeName} ({_airframeId}): " +
                         $"allowlisted={_activePreset is not null}, airbrake={_hasAirbrake}, afterburner={_hasAfterburner}, " +
                         $"throttleUseNegative={PlayerSettings.throttleUseNegative}");
+                }
+            }
+
+            if (NeedsCapabilityDiscovery() &&
+                _capabilityDiscoveryAttempts < MaxCapabilityDiscoveryAttempts &&
+                simulationTime >= _nextCapabilityDiscoveryTime)
+            {
+                var hadAirbrake = _hasAirbrake;
+                var hadAfterburner = _hasAfterburner;
+                DiscoverLocalCapabilities(aircraft!);
+                _nextCapabilityDiscoveryTime = simulationTime + CapabilityDiscoveryRetrySeconds;
+                RefreshApplicableCapabilities();
+                if (hadAirbrake != _hasAirbrake || hadAfterburner != _hasAfterburner)
+                {
+                    RebuildRuntime(settings);
                 }
             }
 
@@ -208,23 +224,40 @@ internal static class RuntimeController
                 rawThrottle,
                 settings.CommandThreshold,
                 reverseDirection);
-            CacheComponentGateInput(frame, controlsEnabled, paused, axisModifierHeld, command);
-            var airframeAllowsDetents = AirframeAllowsDetents();
-            var compatibleIntegrator = !externalRelativeThrottleIntegrator || externalUsesSignedMapping;
-            var detentsAllowed = airframeAllowsDetents && relativeThrottle && compatibleIntegrator;
-            var idleApplies = settings.IdleEnabled && _hasAirbrake;
-            var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
-
             var simulatedThrottleBefore = simulatedThrottleAccessor(state);
             var simulatedThrottleRange = externalUsesSignedMapping || PlayerSettings.throttleUseNegative
                 ? SimulatedThrottleRange.NegativeOneToOne
                 : SimulatedThrottleRange.ZeroToOne;
+            var foreignThrottleControl = ThrottleOutputOwnership.IsForeignControlActive(
+                foreignThrottlePatchPresent,
+                requestedThrottle,
+                simulatedThrottleBefore,
+                simulatedThrottleRange,
+                invertOutput: reverseDirection);
+            if (foreignThrottleControl != _foreignThrottleBypassActive)
+            {
+                _foreignThrottleBypassActive = foreignThrottleControl;
+                if (settings.DebugLogging && _log is not null)
+                {
+                    _log.LogInfo(foreignThrottleControl
+                        ? "Detents bypassed: another mod is controlling throttle"
+                        : "Detents resumed: relative throttle control returned to the game");
+                }
+            }
+            var airframeAllowsDetents = AirframeAllowsDetents();
+            var compatibleIntegrator = !externalRelativeThrottleIntegrator || externalUsesSignedMapping;
+            var autoHoverEnabled = autoHoverAccessor(aircraft!);
+            var detentsAllowed = airframeAllowsDetents && relativeThrottle && compatibleIntegrator &&
+                                 !autoHoverEnabled && !foreignThrottleControl;
+            var idleApplies = settings.IdleEnabled && _hasAirbrake;
+            var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
+
             var hasLiveDetentCapability = _hasAirbrake || _hasAfterburner;
             var sensitivityEnabled = settings.ThrottleSensitivity != 1f &&
                                      RelativeThrottleSensitivity.ShouldApply(
                 settings.Enabled,
                 relativeThrottle,
-                airframeAllowsDetents && hasLiveDetentCapability,
+                airframeAllowsDetents && hasLiveDetentCapability && !autoHoverEnabled && !foreignThrottleControl,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
@@ -299,8 +332,6 @@ internal static class RuntimeController
                 idleApplies,
                 afterburnerApplies);
             _lastObservedFrame = frame;
-            _lastObservedSimulationTime = simulationTime;
-            _hasLastObservedSimulationTime = true;
         }
         catch (Exception exception)
         {
@@ -325,173 +356,6 @@ internal static class RuntimeController
         {
             _runtime.CancelPendingHolds();
             _indicator = DetentIndicatorSnapshot.Hidden;
-            InvalidateComponentGateInput();
-        }
-    }
-
-    /// <summary>Suppresses the local aircraft's airbrake only while the idle detent is holding at zero throttle; anything unconfirmed returns false and stays vanilla.</summary>
-    public static bool ShouldInhibitAirbrake(Airbrake airbrake, ControlInputs inputs, float originalThrottle)
-    {
-        try
-        {
-            if (!_hasSettings || !_hasAirbrake || originalThrottle != 0f ||
-                !PlayerSettings.throttleUseRelative)
-            {
-                return false;
-            }
-
-            var local = IsLocalAirbrake(airbrake);
-            if (!local)
-            {
-                return false;
-            }
-
-            var settings = _settings;
-            var inputAllowsBlock = ComponentGateInputAllowsBlock(DetentDirection.Lower);
-            var patchActive = _airbrakeComponentGateActive;
-            var stateMachineBlocks = _airbrakeConfirmedFrame == Time.frameCount ||
-                                     _runtime.Snapshot.AirbrakeInhibited;
-            return patchActive && settings.Enabled && settings.IdleEnabled &&
-                   inputAllowsBlock && stateMachineBlocks;
-        }
-        catch (Exception exception)
-        {
-            LogFailureOnce("Airbrake gate", exception);
-            return false;
-        }
-    }
-
-    /// <summary>Confirms the preset's component airbrake exists on the live aircraft; the gate stays inactive until this fires.</summary>
-    public static void ObserveAirbrake(Airbrake airbrake)
-    {
-        if (_activePreset?.AirbrakePath != AirbrakePath.Component ||
-            !IsLocalAirbrake(airbrake) || _liveAirbrakeComponentConfirmed)
-        {
-            return;
-        }
-
-        _liveAirbrakeComponentConfirmed = true;
-        _airbrakeConfirmedFrame = Time.frameCount;
-        RefreshApplicableCapabilities();
-    }
-
-    /// <summary>Split-surface counterpart of <see cref="ShouldInhibitAirbrake"/>, gated on its own patch and live confirmation.</summary>
-    public static bool ShouldInhibitSplitAirbrake(
-        ControlSurface controlSurface,
-        ControlInputs inputs,
-        float originalThrottle)
-    {
-        try
-        {
-            if (!_hasSettings || !_hasAirbrake || originalThrottle != 0f ||
-                !PlayerSettings.throttleUseRelative)
-            {
-                return false;
-            }
-
-            var local = IsLocalControlSurface(controlSurface);
-            if (!local)
-            {
-                return false;
-            }
-
-            var settings = _settings;
-            var inputAllowsBlock = ComponentGateInputAllowsBlock(DetentDirection.Lower);
-            var patchActive = _splitAirbrakeGateActive;
-            var stateMachineBlocks = _airbrakeConfirmedFrame == Time.frameCount ||
-                                     _runtime.Snapshot.AirbrakeInhibited;
-            return patchActive && settings.Enabled && settings.IdleEnabled &&
-                   inputAllowsBlock && stateMachineBlocks;
-        }
-        catch (Exception exception)
-        {
-            LogFailureOnce("Split-airbrake gate", exception);
-            return false;
-        }
-    }
-
-    /// <summary>Confirms the preset's split airbrake surfaces on the live aircraft.</summary>
-    public static void ObserveSplitAirbrake(ControlSurface controlSurface)
-    {
-        if (_activePreset?.AirbrakePath != AirbrakePath.Split ||
-            !IsLocalControlSurface(controlSurface) || _liveSplitAirbrakeConfirmed)
-        {
-            return;
-        }
-
-        _liveSplitAirbrakeConfirmed = true;
-        _airbrakeConfirmedFrame = Time.frameCount;
-        RefreshApplicableCapabilities();
-    }
-
-    /// <summary>
-    /// Collects the local aircraft's nozzles until all expected ones match the preset's afterburner range.
-    /// Only then is the detent boundary retargeted to the confirmed live start, so a mismatched airframe
-    /// keeps vanilla afterburner behavior.
-    /// </summary>
-    public static void ObserveAfterburner(JetNozzle nozzle, Aircraft aircraft)
-    {
-        if (_afterburnerRangeMatchesPreset || _activePreset?.HasAfterburner != true ||
-            _localCollective || !IsLocalAircraft(aircraft))
-        {
-            return;
-        }
-
-        if (!AddAfterburnerCandidate(nozzle))
-        {
-            return;
-        }
-
-        var previousBoundary = _runtime.AfterburnerDetent.Boundary;
-        RefreshAfterburnerSamples();
-        RefreshApplicableCapabilities();
-        if (!_afterburnerRangeMatchesPreset)
-        {
-            return;
-        }
-
-        _afterburnerConfirmedFrame = Time.frameCount;
-
-        var confirmedBoundary = AfterburnerCompatibility.ResolveDetentBoundary(
-            _activePreset,
-            liveRangeConfirmed: true,
-            _liveAfterburnerStart);
-        if (_hasSettings && Math.Abs(previousBoundary - confirmedBoundary) > 1e-9)
-        {
-            _runtime.RetargetAfterburnerBoundary(confirmedBoundary);
-        }
-
-    }
-
-    /// <summary>Can only turn an existing vanilla allow into a block for the local aircraft; it never enables afterburner vanilla refused.</summary>
-    public static bool ShouldBlockAfterburner(Aircraft aircraft, bool vanillaAllowAfterburner)
-    {
-        try
-        {
-            if (!_hasSettings || !_hasAfterburner || !vanillaAllowAfterburner ||
-                !PlayerSettings.throttleUseRelative)
-            {
-                return false;
-            }
-
-            var local = IsLocalAircraft(aircraft);
-            if (!local)
-            {
-                return false;
-            }
-
-            var settings = _settings;
-            var inputAllowsBlock = ComponentGateInputAllowsBlock(DetentDirection.Upper);
-            var patchActive = _afterburnerGateActive;
-            var stateMachineBlocks = _afterburnerConfirmedFrame == Time.frameCount ||
-                                     !_runtime.Snapshot.AfterburnerUnlocked;
-            return patchActive && settings.Enabled && settings.AfterburnerEnabled &&
-                   inputAllowsBlock && stateMachineBlocks;
-        }
-        catch (Exception exception)
-        {
-            LogFailureOnce("Afterburner gate", exception);
-            return false;
         }
     }
 
@@ -526,17 +390,15 @@ internal static class RuntimeController
         _afterburnerRangeMatchesPreset = false;
         AfterburnerCandidates.Clear();
         AfterburnerSamples.Clear();
-        _airbrakeConfirmedFrame = -1;
-        _afterburnerConfirmedFrame = -1;
         _hasAirbrake = false;
         _hasAfterburner = false;
+        _capabilityDiscoveryAttempts = 0;
+        _nextCapabilityDiscoveryTime = 0f;
         _indicator = DetentIndicatorSnapshot.Hidden;
         _hasEffectiveSimulatedThrottle = false;
         _effectiveSimulatedThrottle = 0;
         _lastObservedFrame = -1;
-        _lastObservedSimulationTime = 0f;
-        _hasLastObservedSimulationTime = false;
-        InvalidateComponentGateInput();
+        _foreignThrottleBypassActive = false;
         if (shouldLog)
         {
             _log!.LogInfo($"Detent state reset: {reason}");
@@ -545,23 +407,6 @@ internal static class RuntimeController
 
     public static void ReportPatchFailure(string patchName, Exception exception) =>
         LogFailureOnce($"{patchName} patch", exception);
-
-    public static bool ShouldInspectAirbrakeCandidates =>
-        _hasSettings && _settings.Enabled && _settings.IdleEnabled &&
-        _activePreset?.HasAirbrake == true && !_localCollective && PlayerSettings.throttleUseRelative;
-
-    public static bool ShouldInspectComponentAirbrake =>
-        ShouldInspectAirbrakeCandidates && _activePreset?.AirbrakePath == AirbrakePath.Component;
-
-    public static bool ShouldInspectSplitAirbrake =>
-        ShouldInspectAirbrakeCandidates && _activePreset?.AirbrakePath == AirbrakePath.Split;
-
-    public static bool ShouldInspectAfterburnerCandidates =>
-        _hasSettings && _settings.Enabled && _settings.AfterburnerEnabled &&
-        _activePreset?.HasAfterburner == true && !_localCollective && PlayerSettings.throttleUseRelative;
-
-    public static bool NeedsAfterburnerConfirmation =>
-        ShouldInspectAfterburnerCandidates && !_afterburnerRangeMatchesPreset;
 
     private static EffectiveSettings ReadSettings()
     {
@@ -614,11 +459,8 @@ internal static class RuntimeController
             idleBoundary,
             afterburnerBoundary);
         _lastObservedFrame = -1;
-        _lastObservedSimulationTime = 0f;
-        _hasLastObservedSimulationTime = false;
         _indicator = DetentIndicatorSnapshot.Hidden;
         _hasEffectiveSimulatedThrottle = false;
-        InvalidateComponentGateInput();
         if (!ReferenceEquals(_localAircraft, null) && !ReferenceEquals(_localInputs, null))
         {
             _runtime.ObserveContext(_localAircraft, _localInputs);
@@ -644,16 +486,12 @@ internal static class RuntimeController
 
     private static void RefreshApplicableCapabilities()
     {
-        var airbrakeConfirmed = AirbrakeCapabilityPaths.IsConfirmed(
-            _activePreset?.AirbrakePath ?? AirbrakePath.None,
-            _liveAirbrakeComponentConfirmed,
-            _liveSplitAirbrakeConfirmed);
-        _idleGateActive = AirbrakeCapabilityPaths.HasActiveGate(
-            _activePreset?.AirbrakePath ?? AirbrakePath.None,
-            _liveAirbrakeComponentConfirmed,
-            _airbrakeComponentGateActive,
-            _liveSplitAirbrakeConfirmed,
-            _splitAirbrakeGateActive);
+        var airbrakeConfirmed = _activePreset?.AirbrakePath switch
+        {
+            AirbrakePath.Component => _liveAirbrakeComponentConfirmed,
+            AirbrakePath.Split => _liveSplitAirbrakeConfirmed,
+            _ => false,
+        };
         _hasAirbrake = AirframePresetCatalog.CanGate(
             _activePreset,
             AirframeFeature.Airbrake,
@@ -669,6 +507,8 @@ internal static class RuntimeController
             AirframeFeature.Afterburner,
             _localCollective,
             _afterburnerRangeMatchesPreset);
+        _idleGateActive = _throttleObserverActive && _hasAirbrake;
+        _afterburnerGateActive = _throttleObserverActive && _hasAfterburner;
         _aircraftCapabilitiesKnown = _hasSettings && RuntimeReadinessPolicy.AreEnabledCapabilitiesKnown(
             _activePreset is not null,
             _settings.IdleEnabled,
@@ -681,8 +521,6 @@ internal static class RuntimeController
 
     private static void ResetAircraftCapabilities()
     {
-        _airbrakeConfirmedFrame = -1;
-        _afterburnerConfirmedFrame = -1;
         _liveAirbrakeComponentConfirmed = false;
         _liveSplitAirbrakeConfirmed = false;
         _liveAfterburnerConfirmed = false;
@@ -691,20 +529,106 @@ internal static class RuntimeController
         _afterburnerRangeMatchesPreset = false;
         AfterburnerCandidates.Clear();
         AfterburnerSamples.Clear();
+        _capabilityDiscoveryAttempts = 0;
+        _nextCapabilityDiscoveryTime = 0f;
     }
 
-    private static bool AddAfterburnerCandidate(JetNozzle nozzle)
+    private static bool NeedsCapabilityDiscovery() =>
+        _activePreset is not null &&
+        !_activePreset.Collective &&
+        !_localCollective &&
+        (_activePreset.HasAirbrake && !_hasAirbrake ||
+         _activePreset.HasAfterburner && !_hasAfterburner);
+
+    /// <summary>Confirms preset capabilities only on components whose owner is the selected local aircraft.</summary>
+    private static void DiscoverLocalCapabilities(Aircraft aircraft)
     {
-        foreach (var candidate in AfterburnerCandidates)
+        if (_activePreset is null || _activePreset.Collective || _localCollective)
         {
-            if (ReferenceEquals(candidate, nozzle))
+            return;
+        }
+
+        _capabilityDiscoveryAttempts++;
+        var ownedAirbrakes = 0;
+        var ownedSplitSurfaces = 0;
+        var ownedNozzles = 0;
+        try
+        {
+            if (_activePreset.AirbrakePath == AirbrakePath.Component)
             {
-                return false;
+                var serializedAircraft = RuntimeCompatibility.AirbrakeSerializedAircraft;
+                var attachedAircraft = RuntimeCompatibility.AirbrakeAttachedAircraft;
+                if (serializedAircraft is not null && attachedAircraft is not null)
+                {
+                    foreach (var airbrake in Resources.FindObjectsOfTypeAll<Airbrake>())
+                    {
+                        if (ReferenceEquals(serializedAircraft(airbrake), aircraft) ||
+                            ReferenceEquals(attachedAircraft(airbrake), aircraft))
+                        {
+                            ownedAirbrakes++;
+                        }
+                    }
+
+                    _liveAirbrakeComponentConfirmed = ownedAirbrakes > 0;
+                }
+            }
+            else if (_activePreset.AirbrakePath == AirbrakePath.Split)
+            {
+                var aircraftAccessor = RuntimeCompatibility.ControlSurfaceAircraft;
+                var maxSplitAccessor = RuntimeCompatibility.ControlSurfaceMaxSplit;
+                if (aircraftAccessor is not null && maxSplitAccessor is not null)
+                {
+                    foreach (var surface in Resources.FindObjectsOfTypeAll<ControlSurface>())
+                    {
+                        if (ReferenceEquals(aircraftAccessor(surface), aircraft) &&
+                            maxSplitAccessor(surface) > 0f)
+                        {
+                            ownedSplitSurfaces++;
+                        }
+                    }
+
+                    _liveSplitAirbrakeConfirmed = ownedSplitSurfaces > 0;
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            LogFailureOnce("Local airbrake discovery", exception);
+        }
+
+        if (_activePreset.HasAfterburner)
+        {
+            try
+            {
+                var aircraftAccessor = RuntimeCompatibility.JetNozzleAircraft;
+                if (aircraftAccessor is not null)
+                {
+                    AfterburnerCandidates.Clear();
+                    foreach (var nozzle in Resources.FindObjectsOfTypeAll<JetNozzle>())
+                    {
+                        if (ReferenceEquals(aircraftAccessor(nozzle), aircraft))
+                        {
+                            AfterburnerCandidates.Add(nozzle);
+                            ownedNozzles++;
+                        }
+                    }
+
+                    RefreshAfterburnerSamples();
+                }
+            }
+            catch (Exception exception)
+            {
+                LogFailureOnce("Local afterburner discovery", exception);
             }
         }
 
-        AfterburnerCandidates.Add(nozzle);
-        return true;
+        if (_hasSettings && _settings.DebugLogging && _log is not null)
+        {
+            _log.LogInfo(
+                $"Capability scan {_capabilityDiscoveryAttempts}/{MaxCapabilityDiscoveryAttempts} for {_airframeId}: " +
+                $"airbrakes={ownedAirbrakes}, splitSurfaces={ownedSplitSurfaces}, nozzles={ownedNozzles}, " +
+                $"afterburnerAggregateConfirmed={_liveAfterburnerConfirmed}");
+        }
     }
 
     private static void RefreshAfterburnerSamples()
@@ -752,124 +676,9 @@ internal static class RuntimeController
             out _liveAfterburnerEnd);
     }
 
-    private static bool IsLocalAirbrake(Airbrake airbrake)
-    {
-        var serializedAircraftAccessor = RuntimeCompatibility.AirbrakeSerializedAircraft;
-        var attachedAircraftAccessor = RuntimeCompatibility.AirbrakeAttachedAircraft;
-        return IsLiveUnityObject(_localAircraft) &&
-               serializedAircraftAccessor is not null && attachedAircraftAccessor is not null &&
-               ReferenceOwnership.AirbrakeMatches(
-                   _localAircraft,
-                   serializedAircraftAccessor(airbrake),
-                   attachedAircraftAccessor(airbrake));
-    }
-
-    private static bool IsLocalControlSurface(ControlSurface controlSurface)
-    {
-        var aircraftAccessor = RuntimeCompatibility.ControlSurfaceAircraft;
-        return IsLiveUnityObject(_localAircraft) && aircraftAccessor is not null &&
-               ReferenceOwnership.AircraftMatches(
-            _localAircraft,
-            aircraftAccessor(controlSurface));
-    }
-
-    private static bool IsLocalAircraft(Aircraft? aircraft)
-    {
-        if (!IsLiveUnityObject(_localAircraft) || !IsLiveUnityObject(aircraft))
-        {
-            return false;
-        }
-
-        return ReferenceOwnership.AircraftMatches(
-            _localAircraft,
-            aircraft);
-    }
-
     private static bool IsLiveUnityObject(object? value) =>
         !ReferenceEquals(value, null) &&
         (value is not UnityEngine.Object unityObject || unityObject != null);
-
-    private static bool ComponentGateInputAllowsBlock(DetentDirection direction)
-    {
-        if (!TryGetComponentGateInput(out var controlsEnabled, out var paused, out var axisModifierHeld, out var command))
-        {
-            return false;
-        }
-
-        var observerAgeSeconds = _hasLastObservedSimulationTime
-            ? Time.time - _lastObservedSimulationTime
-            : double.PositiveInfinity;
-        return ComponentGatePolicy.AllowsBlock(
-            controlsEnabled,
-            paused,
-            axisModifierHeld,
-            command,
-            direction,
-            observerAgeSeconds);
-    }
-
-    private static bool TryGetComponentGateInput(
-        out bool controlsEnabled,
-        out bool paused,
-        out bool axisModifierHeld,
-        out ThrottleCommand command)
-    {
-        var frame = Time.frameCount;
-        if (_componentGateInputFrame != frame)
-        {
-            _componentGateInputFrame = frame;
-            _componentGateInputValid = false;
-            var playerAccessor = RuntimeCompatibility.PilotPlayer;
-            if (playerAccessor is not null && !ReferenceEquals(_localState, null))
-            {
-                var player = playerAccessor(_localState);
-                if (!ReferenceEquals(player, null))
-                {
-                    var rawThrottle = player.GetAxisRaw("Throttle");
-                    var reverseDirection = _localCollective && PlayerSettings.invertCollective;
-                    _componentGateControlsEnabled = GameManager.flightControlsEnabled;
-                    _componentGatePaused = Time.timeScale <= 0f;
-                    _componentGateAxisModifierHeld = player.GetButton("Axis Modifier");
-                    _componentGateCommand = ThrottleCommands.FromRawAxis(
-                        rawThrottle,
-                        _settings.CommandThreshold,
-                        reverseDirection);
-                    _componentGateInputValid = true;
-                }
-            }
-        }
-
-        controlsEnabled = _componentGateControlsEnabled;
-        paused = _componentGatePaused;
-        axisModifierHeld = _componentGateAxisModifierHeld;
-        command = _componentGateCommand;
-        return _componentGateInputValid;
-    }
-
-    private static void CacheComponentGateInput(
-        int frame,
-        bool controlsEnabled,
-        bool paused,
-        bool axisModifierHeld,
-        ThrottleCommand command)
-    {
-        _componentGateInputFrame = frame;
-        _componentGateInputValid = true;
-        _componentGateControlsEnabled = controlsEnabled;
-        _componentGatePaused = paused;
-        _componentGateAxisModifierHeld = axisModifierHeld;
-        _componentGateCommand = command;
-    }
-
-    private static void InvalidateComponentGateInput()
-    {
-        _componentGateInputFrame = -1;
-        _componentGateInputValid = false;
-        _componentGateControlsEnabled = false;
-        _componentGatePaused = false;
-        _componentGateAxisModifierHeld = false;
-        _componentGateCommand = ThrottleCommand.Neutral;
-    }
 
     private static void LogFailureOnce(string operation, Exception exception)
     {

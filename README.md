@@ -34,7 +34,10 @@ unknown aircraft, AI, and remote aircraft are untouched, as are weapons and
 networking. Multiplayer use is unverified, and hosts or server moderators may
 prohibit BepInEx or this mod.
 
-This is a v0.2 prototype. Installed-build notes for contributors are in
+Auto Hover temporarily bypasses both detents and the sensitivity multiplier;
+turning it off restores them for the local aircraft.
+
+This is a v0.3 prototype. Installed-build notes for contributors are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.png)
@@ -83,6 +86,8 @@ The default config is:
 [General]
 Enabled = true
 DebugLogging = false
+NetworkValidation = false
+NetworkValidationOwner = -1
 
 [Indicator]
 Enabled = true
@@ -117,17 +122,39 @@ raw input magnitude required to hold; `1.0` requires full-scale input.
 `EndpointEpsilon` tolerates float noise; `ResetHysteresis` controls how far the
 throttle must move away before an unlocked detent relocks and is always at
 least the endpoint tolerance. `DebugLogging` is off by default and is useful
-when diagnosing a local install.
+when diagnosing a local install. `NetworkValidation` is a separate opt-in
+multiplayer diagnostic; keep it off during normal play. See
+[docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md) for the two-client
+check and log analyzer.
 
 The mod does not require Configuration Manager. Text-file changes apply on
 the next launch.
 
 PauelsRandomFixes' ThrottleRelativeVelocity is supported. While that fix is
 active, its Relative Sensitivity setting takes priority and this mod's
-Multiplier is ignored. Other mods that rewrite throttle, airbrake,
-afterburner, or autopilot behavior may still conflict; test them together.
+Multiplier is ignored. Detents also yields when another Harmony patch is
+actively publishing the local throttle. Other airbrake, afterburner, or
+autopilot changes may still conflict; test them together.
 Use PauelsRandomFixes if you want sensitivity control on aircraft without a
 supported detent.
+
+## Runtime cost and mod conflicts
+
+Normal operation patches one local-pilot throttle method. The mod does not run
+detent code on AI or remote aircraft, and it does not patch every airbrake,
+control surface, engine, or afterburner in a mission. It checks the selected
+aircraft's capabilities when you enter the seat, then retries only while an
+expected component is still loading.
+
+At each seat entry, the mod checks whether another Harmony patch shares the
+throttle method. If that patch publishes a value outside the game's relative
+throttle accumulator, detents and sensitivity yield until vanilla control
+returns. This avoids competing with active autopilot or throttle overrides
+without disabling Detents just because another mod is installed.
+
+Network Validation is the expensive diagnostic path. It remains off by
+default. When enabled with Debug Logging, it samples only the local aircraft
+and one selected remote aircraft at 10 Hz.
 
 ## Compatibility and testing
 
@@ -149,9 +176,10 @@ From PowerShell 7, run the one-command build:
 pwsh ./build/Build.ps1
 ```
 
-The script runs the focused core executable tests, builds the Release plugin,
-creates the NOMM, manual plugin-only, and standalone ZIP layouts, and validates
-their contents. It finds Nuclear Option through Steam locations when possible.
+The script runs the focused core tests and network-analyzer self-test, builds
+the Release plugin, creates the NOMM, manual plugin-only, and standalone ZIP
+layouts, and validates their contents. It finds Nuclear Option through Steam
+locations when possible.
 To select it explicitly, pass a directory or set the environment variable:
 
 ```powershell

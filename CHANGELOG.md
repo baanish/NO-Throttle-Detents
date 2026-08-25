@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- Moves detent enforcement to the local pilot's throttle path and removes the per-aircraft airbrake, control-surface, and nozzle patches.
+- Requires `GameManager.IsLocalAircraft(Aircraft)` before changing throttle state. AI and remote aircraft no longer run detent logic.
+- Confirms supported airbrakes and afterburners through read-only owner-field scans, with a bounded retry while an expected component is still loading.
+- Bypasses detents and sensitivity while Auto Hover is on. Turning Auto Hover off resumes from the current throttle state.
+- Yields while another Harmony patch actively owns the local throttle output, then resumes from a fresh lock when vanilla ownership returns.
+- Refreshes throttle-patch ownership on each seat entry and accounts for inverted collective output when comparing another mod's throttle value.
+- Adds opt-in Network Validation logs and a PowerShell analyzer for two-client checks. The observer always includes the local aircraft, accepts one remote owner, and caches components by aircraft identity. Both diagnostic switches remain off in release packages.
+- Parks active holds `0.0001` inside each changeover so the value survives the game's half-precision throttle transport.
+- Live QA on Nuclear Option 0.34.2, Steam build 24724372, covered all 13 selectable airframes. Vortex and Ifrit exercised both detents, Auto Hover bypassed the mod, and an active external throttle writer received control without detent interference. Collective and unsupported aircraft remained unaffected. Remote-owner two-client validation remains outstanding.
+
 ## 0.2.0
 
 - Adds a native flight-HUD indicator below the throttle gauge while either detent is locked or counting its hold.

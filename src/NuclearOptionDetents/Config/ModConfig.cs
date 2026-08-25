@@ -45,6 +45,23 @@ internal sealed class ModConfig
                 "Logs aircraft attachment and lifecycle resets to BepInEx\\LogOutput.log.",
                 "Debug Logging",
                 90));
+        NetworkValidation = config.Bind(
+            GeneralSection,
+            "NetworkValidation",
+            false,
+            Describe(
+                "With Debug Logging, samples the local aircraft and one selected remote for multiplayer checks.",
+                "Network Validation",
+                80));
+        NetworkValidationOwner = config.Bind(
+            GeneralSection,
+            "NetworkValidationOwner",
+            -1,
+            Describe(
+                "Remote session player index; -1 samples only the local aircraft and lists available owners.",
+                "Network Validation Owner",
+                70,
+                new AcceptableValueRange<int>(-1, 255)));
         IndicatorEnabled = config.Bind(
             IndicatorSection,
             "Enabled",
@@ -128,6 +145,8 @@ internal sealed class ModConfig
     public ConfigEntry<string> RuntimeStatus { get; }
     public ConfigEntry<bool> Enabled { get; }
     public ConfigEntry<bool> DebugLogging { get; }
+    public ConfigEntry<bool> NetworkValidation { get; }
+    public ConfigEntry<int> NetworkValidationOwner { get; }
     public ConfigEntry<bool> IndicatorEnabled { get; }
     /// <summary>Applied only to aircraft with a supported, live detent; every other aircraft stays vanilla, which is why the description points elsewhere for a global sensitivity change.</summary>
     public ConfigEntry<float> ThrottleSensitivity { get; }

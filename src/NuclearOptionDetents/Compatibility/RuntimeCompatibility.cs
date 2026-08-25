@@ -16,14 +16,13 @@ internal static class RuntimeCompatibility
     public static AccessTools.FieldRef<Pilot, Aircraft>? PilotOwnedAircraft { get; private set; }
     public static AccessTools.FieldRef<PilotPlayerState, ControlInputs>? PilotControlInputs { get; private set; }
     public static AccessTools.FieldRef<PilotPlayerState, float>? PilotSimulatedThrottle { get; private set; }
+    public static Func<Aircraft, bool>? AircraftAutoHoverEnabled { get; private set; }
+    public static Func<Aircraft, bool>? IsLocalAircraft { get; private set; }
     public static AccessTools.FieldRef<Airbrake, Aircraft>? AirbrakeSerializedAircraft { get; private set; }
     public static AccessTools.FieldRef<Airbrake, Aircraft>? AirbrakeAttachedAircraft { get; private set; }
-    public static AccessTools.FieldRef<Airbrake, ControlInputs>? AirbrakeControlInputs { get; private set; }
     public static AccessTools.FieldRef<ControlSurface, Aircraft>? ControlSurfaceAircraft { get; private set; }
-    public static AccessTools.FieldRef<ControlSurface, ControlInputs>? ControlSurfaceInputs { get; private set; }
     public static AccessTools.FieldRef<ControlSurface, float>? ControlSurfaceMaxSplit { get; private set; }
     public static AccessTools.FieldRef<JetNozzle, Aircraft>? JetNozzleAircraft { get; private set; }
-    public static AccessTools.FieldRef<Aircraft, ControlInputs>? AircraftControlInputs { get; private set; }
     public static FieldInfo? JetNozzleAfterburners { get; private set; }
     public static FieldInfo? JetNozzleAfterburnerThrottleStart { get; private set; }
     public static FieldInfo? JetNozzleAfterburnerThrottleEnd { get; private set; }
@@ -41,7 +40,21 @@ internal static class RuntimeCompatibility
         var pilotAircraftField = RequireDeclaredField(typeof(Pilot), "aircraft", typeof(Aircraft));
         var inputsField = RequireField(typeof(PilotBaseState), "controlInputs", typeof(ControlInputs));
         var simulatedThrottleField = RequireDeclaredField(typeof(PilotPlayerState), "simulatedThrottle", typeof(float));
-        var aircraftInputsField = RequireDeclaredField(typeof(Aircraft), "controlInputs", typeof(ControlInputs));
+        var autoHoverMethod = AccessTools.DeclaredMethod(typeof(Aircraft), "IsAutoHoverEnabled", Type.EmptyTypes) ??
+                              throw new MissingMethodException(typeof(Aircraft).FullName, "IsAutoHoverEnabled");
+        if (autoHoverMethod.ReturnType != typeof(bool))
+        {
+            throw new InvalidOperationException("Aircraft.IsAutoHoverEnabled() does not return bool.");
+        }
+        var localAircraftMethod = AccessTools.DeclaredMethod(
+                                      typeof(GameManager),
+                                      "IsLocalAircraft",
+                                      new[] { typeof(Aircraft) }) ??
+                                  throw new MissingMethodException(typeof(GameManager).FullName, "IsLocalAircraft(Aircraft)");
+        if (localAircraftMethod.ReturnType != typeof(bool) || !localAircraftMethod.IsStatic)
+        {
+            throw new InvalidOperationException("GameManager.IsLocalAircraft(Aircraft) has an unexpected shape.");
+        }
         AircraftDefinition = RequireField(typeof(Aircraft), "definition", typeof(UnitDefinition));
         UnitDefinitionJsonKey = RequireDeclaredField(typeof(UnitDefinition), "jsonKey", typeof(string));
         UnitDefinitionName = RequireDeclaredField(typeof(UnitDefinition), "unitName", typeof(string));
@@ -52,7 +65,8 @@ internal static class RuntimeCompatibility
         PilotOwnedAircraft = AccessTools.FieldRefAccess<Pilot, Aircraft>(pilotAircraftField);
         PilotControlInputs = AccessTools.FieldRefAccess<PilotPlayerState, ControlInputs>(inputsField);
         PilotSimulatedThrottle = AccessTools.FieldRefAccess<PilotPlayerState, float>(simulatedThrottleField);
-        AircraftControlInputs = AccessTools.FieldRefAccess<Aircraft, ControlInputs>(aircraftInputsField);
+        AircraftAutoHoverEnabled = AccessTools.MethodDelegate<Func<Aircraft, bool>>(autoHoverMethod);
+        IsLocalAircraft = AccessTools.MethodDelegate<Func<Aircraft, bool>>(localAircraftMethod);
     }
 
     public static bool TryGetAirframeIdentity(Aircraft aircraft, out string id, out string displayName)
@@ -75,33 +89,24 @@ internal static class RuntimeCompatibility
 
     public static void ResolveAirbrakeFields()
     {
-        ValidateDirectControlMembers(readsThrottle: true, readsNegativeThrottle: false);
         var serializedAircraftField = RequireDeclaredField(typeof(Airbrake), "aircraft", typeof(Aircraft));
         var attachedAircraftField = RequireDeclaredField(typeof(Airbrake), "attachedAircraft", typeof(Aircraft));
-        var inputsField = RequireDeclaredField(typeof(Airbrake), "controlInputs", typeof(ControlInputs));
         AirbrakeSerializedAircraft = AccessTools.FieldRefAccess<Airbrake, Aircraft>(serializedAircraftField);
         AirbrakeAttachedAircraft = AccessTools.FieldRefAccess<Airbrake, Aircraft>(attachedAircraftField);
-        AirbrakeControlInputs = AccessTools.FieldRefAccess<Airbrake, ControlInputs>(inputsField);
     }
 
     public static void ResolveSplitAirbrakeFields()
     {
-        ValidateDirectControlMembers(readsThrottle: true, readsNegativeThrottle: false);
         var aircraftField = RequireDeclaredField(typeof(ControlSurface), "aircraft", typeof(Aircraft));
-        var inputsField = RequireDeclaredField(typeof(ControlSurface), "controlInputs", typeof(ControlInputs));
         var maxSplitField = RequireDeclaredField(typeof(ControlSurface), "maxSplit", typeof(float));
         ControlSurfaceAircraft = AccessTools.FieldRefAccess<ControlSurface, Aircraft>(aircraftField);
-        ControlSurfaceInputs = AccessTools.FieldRefAccess<ControlSurface, ControlInputs>(inputsField);
         ControlSurfaceMaxSplit = AccessTools.FieldRefAccess<ControlSurface, float>(maxSplitField);
     }
 
     public static void ResolveJetNozzleFields()
     {
-        ValidateDirectControlMembers(readsThrottle: false, readsNegativeThrottle: false);
         var aircraftField = RequireDeclaredField(typeof(JetNozzle), "aircraft", typeof(Aircraft));
-        var inputsField = RequireDeclaredField(typeof(Aircraft), "controlInputs", typeof(ControlInputs));
         JetNozzleAircraft = AccessTools.FieldRefAccess<JetNozzle, Aircraft>(aircraftField);
-        AircraftControlInputs = AccessTools.FieldRefAccess<Aircraft, ControlInputs>(inputsField);
         JetNozzleAfterburners = AccessTools.DeclaredField(typeof(JetNozzle), "afterburners") ??
                                   throw new MissingFieldException(typeof(JetNozzle).FullName, "afterburners");
         var afterburnerType = JetNozzleAfterburners.FieldType.GetElementType() ??

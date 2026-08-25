@@ -1,6 +1,7 @@
 using BepInEx;
 using NuclearOptionDetents.Config;
 using NuclearOptionDetents.Core;
+using NuclearOptionDetents.Diagnostics;
 using NuclearOptionDetents.Patches;
 using NuclearOptionDetents.UI;
 using System.Runtime.CompilerServices;
@@ -13,10 +14,11 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.baanish.nuclearoption.detents";
     public const string PluginName = "Nuclear Option Detents";
-    public const string PluginVersion = "0.2.0";
+    public const string PluginVersion = "0.3.0";
 
     private PatchInstaller? _patchInstaller;
     private DetentHudIndicator? _hudIndicator;
+    private NetworkValidationObserver? _networkValidation;
     private bool _hudFailureLogged;
 
     /// <summary>Config, patches, and HUD are installed independently: a HUD failure logs once and leaves the detents running.</summary>
@@ -24,6 +26,7 @@ public sealed class Plugin : BaseUnityPlugin
     {
         var modConfig = new ModConfig(Config);
         RuntimeController.Initialize(modConfig, Logger);
+        _networkValidation = new NetworkValidationObserver(modConfig, Logger);
         _patchInstaller = new PatchInstaller(Logger);
         _patchInstaller.Install();
         try
@@ -38,15 +41,10 @@ public sealed class Plugin : BaseUnityPlugin
         }
         SceneManager.activeSceneChanged += HandleActiveSceneChanged;
 
-        RuntimeController.SetPatchStatus(
-            _patchInstaller.ThrottleObserver.IsActive,
-            _patchInstaller.AirbrakeComponentGate.IsActive,
-            _patchInstaller.SplitAirbrakeGate.IsActive,
-            _patchInstaller.AfterburnerGate.IsActive);
+        RuntimeController.SetPatchStatus(_patchInstaller.ThrottleObserver.IsActive);
         Logger.LogInfo(
             $"{PluginName} {PluginVersion} loaded. " +
-            $"Throttle={_patchInstaller.ThrottleObserver}; airbrake={_patchInstaller.AirbrakeComponentGate}; " +
-            $"split airbrake={_patchInstaller.SplitAirbrakeGate}; afterburner={_patchInstaller.AfterburnerGate}.");
+            $"Throttle={_patchInstaller.ThrottleObserver}.");
     }
 
     /// <summary>
@@ -67,6 +65,7 @@ public sealed class Plugin : BaseUnityPlugin
     {
         SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         _hudIndicator?.Reset();
+        _networkValidation?.Reset();
         RuntimeController.ResetAll("plugin unload");
         _patchInstaller?.Uninstall();
     }
@@ -74,6 +73,7 @@ public sealed class Plugin : BaseUnityPlugin
     /// <summary>Renders after the game's HUD has updated for the frame; a throw tears down the indicator and is logged only once.</summary>
     private void LateUpdate()
     {
+        _networkValidation?.Update();
         try
         {
             _hudIndicator?.Render(RuntimeController.IndicatorSnapshot);
@@ -94,6 +94,7 @@ public sealed class Plugin : BaseUnityPlugin
     private void HandleActiveSceneChanged(Scene previous, Scene current)
     {
         _hudIndicator?.Reset();
+        _networkValidation?.Reset();
         RuntimeController.ResetAll($"scene changed from '{previous.name}' to '{current.name}'");
     }
 }

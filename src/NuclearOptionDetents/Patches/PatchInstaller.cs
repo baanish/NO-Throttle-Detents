@@ -9,7 +9,7 @@ namespace NuclearOptionDetents.Patches;
 
 internal sealed class PatchInstaller
 {
-    private const string HarmonyId = "com.baanish.nuclearoption.detents";
+    internal const string HarmonyId = "com.baanish.nuclearoption.detents";
     private readonly Harmony _harmony = new(HarmonyId);
     private readonly ManualLogSource _log;
 
@@ -19,16 +19,10 @@ internal sealed class PatchInstaller
     }
 
     public FeatureStatus ThrottleObserver { get; private set; }
-    public FeatureStatus AirbrakeComponentGate { get; private set; }
-    public FeatureStatus SplitAirbrakeGate { get; private set; }
-    public FeatureStatus AfterburnerGate { get; private set; }
 
     public void Install()
     {
         ThrottleObserver = InstallThrottleObserver();
-        AirbrakeComponentGate = InstallAirbrakeComponentGate();
-        SplitAirbrakeGate = InstallSplitAirbrakeGate();
-        AfterburnerGate = InstallAfterburnerGate();
     }
 
     public void Uninstall()
@@ -42,6 +36,9 @@ internal sealed class PatchInstaller
         try
         {
             RuntimeCompatibility.ResolveThrottleObserverFields();
+            ResolveOptionalCapability("airbrake", RuntimeCompatibility.ResolveAirbrakeFields);
+            ResolveOptionalCapability("split airbrake", RuntimeCompatibility.ResolveSplitAirbrakeFields);
+            ResolveOptionalCapability("afterburner", RuntimeCompatibility.ResolveJetNozzleFields);
             var target = ResolveThrottleTarget();
             var postfixMethod = AccessTools.DeclaredMethod(typeof(ThrottleInputPatch), nameof(ThrottleInputPatch.Postfix)) ??
                                 throw new MissingMethodException(nameof(ThrottleInputPatch), nameof(ThrottleInputPatch.Postfix));
@@ -82,6 +79,18 @@ internal sealed class PatchInstaller
         }
     }
 
+    private void ResolveOptionalCapability(string name, Action resolver)
+    {
+        try
+        {
+            resolver();
+        }
+        catch (Exception exception)
+        {
+            _log.LogWarning($"{name} capability discovery unavailable: {exception.Message}");
+        }
+    }
+
     private static MethodBase ResolveThrottleTarget()
     {
         return AccessTools.DeclaredMethod(
@@ -91,88 +100,6 @@ internal sealed class PatchInstaller
                ?? throw new MissingMethodException(
                    nameof(PilotPlayerState),
                    "PlayerThrottleAxis1Controls");
-    }
-
-    private FeatureStatus InstallAirbrakeComponentGate()
-    {
-        var patched = new List<MethodBase>();
-        try
-        {
-            RuntimeCompatibility.ResolveAirbrakeFields();
-            var target = AccessTools.DeclaredMethod(typeof(Airbrake), "Update", Type.EmptyTypes) ??
-                         throw new MissingMethodException(nameof(Airbrake), "Update");
-            _harmony.Patch(
-                target,
-                prefix: HarmonyMethod(typeof(AirbrakePatch), nameof(AirbrakePatch.Prefix)),
-                postfix: HarmonyMethod(typeof(AirbrakePatch), nameof(AirbrakePatch.Postfix)),
-                finalizer: HarmonyMethod(typeof(AirbrakePatch), nameof(AirbrakePatch.Finalizer)));
-            patched.Add(target);
-            return FeatureStatus.Active(RuntimeCompatibility.FormatMethod(target));
-        }
-        catch (Exception exception)
-        {
-            RollBack(patched);
-            return FeatureStatus.Unavailable(exception.Message);
-        }
-    }
-
-    private FeatureStatus InstallSplitAirbrakeGate()
-    {
-        var patched = new List<MethodBase>();
-        try
-        {
-            RuntimeCompatibility.ResolveSplitAirbrakeFields();
-            var target = AccessTools.DeclaredMethod(typeof(ControlSurface), "UpdateJobFields", Type.EmptyTypes) ??
-                         throw new MissingMethodException(nameof(ControlSurface), "UpdateJobFields");
-            _harmony.Patch(
-                target,
-                prefix: HarmonyMethod(typeof(SplitAirbrakePatch), nameof(SplitAirbrakePatch.Prefix)),
-                postfix: HarmonyMethod(typeof(SplitAirbrakePatch), nameof(SplitAirbrakePatch.Postfix)),
-                finalizer: HarmonyMethod(typeof(SplitAirbrakePatch), nameof(SplitAirbrakePatch.Finalizer)));
-            patched.Add(target);
-            return FeatureStatus.Active(RuntimeCompatibility.FormatMethod(target));
-        }
-        catch (Exception exception)
-        {
-            RollBack(patched);
-            return FeatureStatus.Unavailable(exception.Message);
-        }
-    }
-
-    private FeatureStatus InstallAfterburnerGate()
-    {
-        var patched = new List<MethodBase>();
-        try
-        {
-            RuntimeCompatibility.ResolveJetNozzleFields();
-            var target = AccessTools.DeclaredMethod(
-                             typeof(JetNozzle),
-                             "Thrust",
-                             new[] { typeof(float), typeof(float), typeof(float), typeof(float), typeof(bool) }) ??
-                         throw new MissingMethodException(nameof(JetNozzle), "Thrust(float,float,float,float,bool)");
-            var parameter = target.GetParameters()[4];
-            if (parameter.ParameterType != typeof(bool) ||
-                !string.Equals(parameter.Name, "allowAfterburner", StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("JetNozzle.Thrust parameter 4 is not bool allowAfterburner.");
-            }
-
-            _harmony.Patch(target, prefix: HarmonyMethod(typeof(AfterburnerPatch), nameof(AfterburnerPatch.Prefix)));
-            patched.Add(target);
-            return FeatureStatus.Active(RuntimeCompatibility.FormatMethod(target));
-        }
-        catch (Exception exception)
-        {
-            RollBack(patched);
-            return FeatureStatus.Unavailable(exception.Message);
-        }
-    }
-
-    private static HarmonyMethod HarmonyMethod(Type type, string name)
-    {
-        var method = AccessTools.DeclaredMethod(type, name) ??
-                     throw new MissingMethodException(type.FullName, name);
-        return new HarmonyMethod(method);
     }
 
     private void RollBack(IEnumerable<MethodBase> methods)

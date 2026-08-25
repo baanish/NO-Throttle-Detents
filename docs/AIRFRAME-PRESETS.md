@@ -28,8 +28,9 @@ The table values came from live aircraft loaded into a mission:
 each local `JetNozzle`.
 
 A preset pins the airbrake path (component or split) and the afterburner range
-and nozzle count. It does not pin a split-surface name or `maxSplit` value; the
-parenthetical `maxSplit` figures are capture notes. A missing, extra,
+and nozzle count. The runtime confirms those values once from components below
+the selected local aircraft. It does not pin a split-surface name or `maxSplit`
+value; the parenthetical `maxSplit` figures are capture notes. A missing, extra,
 unreadable, or mismatched nozzle leaves the afterburner detent vanilla, and the
 AB-4 needs all four matching nozzles. The captured ranges describe the full-dry
 to afterburner boundary, not a user-visible 100% throttle value. The table

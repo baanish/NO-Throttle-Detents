@@ -12,10 +12,10 @@ resumes.
 
 Absolute/HOTAS mode and collective aircraft are pass-through paths. Unknown
 aircraft and capabilities marked absent in the explicit preset table are also
-vanilla. Harmony hooks run process-wide; each gate then requires an exact
-local-aircraft identity match before it can change behavior. AI, remote
-aircraft, missiles, spectators, networking, damage, weapons, and aircraft
-definitions remain vanilla.
+vanilla. The throttle observer requires the game to identify the selected
+aircraft as local before it writes anything. AI, remote aircraft, missiles,
+spectators, networking, damage, weapons, and aircraft definitions remain
+vanilla.
 
 ## Detent state
 
@@ -27,10 +27,6 @@ opposite command, or a lost input reference cancels an unfinished hold and
 leaves the affected path vanilla. Moving away by the configured hysteresis
 relocks an unlocked detent. Scene, aircraft, and mode changes reset both
 detents.
-
-Component gates also pass vanilla when their throttle observation is older than
-`0.1` seconds. This freshness guard is independent of the simulation-time
-dwell clock.
 
 Elapsed simulation time controls unlocking, so the result is based on time
 rather than a fixed number of frames. The state machine is intentionally kept
@@ -52,18 +48,44 @@ clones the native throttle-label style below the flight HUD's throttle gauge.
 It is visible only while the hold parks throttle at a locked or holding
 boundary, and disappears on release, bypass, or lifecycle reset.
 
-## Component gates
+Auto Hover bypasses detents and sensitivity. The same local throttle observer
+runs from the game's fixed-update path while Auto Hover is active, so the
+runtime tracks the live accumulator without changing it. Turning Auto Hover
+off starts both detents from a fresh locked state.
 
-The idle gate temporarily avoids the exact-zero input that opens a component
-airbrake. A separate path covers split airbrakes. Each preset pins which path
-the aircraft uses, but not an exact surface name or `maxSplit` value. Both
-paths restore the original input after vanilla code runs.
+Foreign Harmony patches on the same throttle method are treated as possible
+output owners. If one publishes a throttle value that no longer matches the
+game's relative accumulator, detents and sensitivity yield until the values
+match again. Neutral input maintains an already parked detent but cannot start
+a new boundary hold. The mod reads Harmony ownership once per seat entry, so a
+mod that patches or unpatches between flights is detected without a per-frame
+patch-table lookup.
 
-The afterburner gate runs only for an allowlisted local aircraft and only when
-vanilla already requested afterburner. It can suppress that existing `true`
-request while the upper detent is locked; it never turns afterburner on.
-AB-4 remains upper-detent eligible only when all four expected nozzles match
-its preset.
+## Runtime cost
+
+The fixed-update path performs constant work on the local pilot's throttle. It
+does not iterate over the aircraft in a mission. Capability discovery scans
+for components when the local player enters an aircraft, with three bounded
+retries if an expected component has not loaded yet.
+
+Network Validation is separate from normal operation. When enabled, it tracks
+the local aircraft and one selected remote aircraft. Component references stay
+cached until either aircraft identity changes.
+
+## Boundary output and capability checks
+
+The local throttle output is parked at `0.0001` above idle or `0.0001` below
+the captured afterburner boundary. The offset stays representable through the
+game's half-precision network value while remaining inside the vanilla
+changeover. The shared throttle value then reaches the aircraft's normal
+airbrake, split-surface, engine, and afterburner code.
+
+When the local player enters an aircraft, the runtime matches live airbrakes,
+split surfaces, and nozzles through their aircraft-owner fields. It retries
+the read-only scan for up to three seconds while an expected capability is
+still missing. A preset and the live components must agree before the related
+detent can run. AB-4 remains upper-detent eligible only when all four expected
+nozzles match its preset. The mod never writes an afterburner decision.
 
 ## Compatibility and failure behavior
 
@@ -74,9 +96,14 @@ snapshot in [COMPATIBILITY.md](COMPATIBILITY.md) records the inspected patch
 points; it is not a runtime version gate.
 
 Debug logging is off by default. When enabled, it records aircraft attachment
-and lifecycle resets. Patch and runtime failures are logged once per operation.
-The plugin performs no telemetry, network access, self-update, or arbitrary
-file writes; BepInEx owns config and log writes.
+and lifecycle resets. Network Validation is a second opt-in switch. With both
+switches enabled, it refreshes the human-owner roster once per second and
+samples the local aircraft plus one configured remote at 10 Hz. Component
+references are resolved once per selected aircraft identity. The records
+contain session player indexes, not player names or platform IDs. Patch and
+runtime failures are logged once per operation. The plugin performs no
+telemetry, network access, self-update, or arbitrary file writes. BepInEx owns
+config and log writes.
 
 ## Extension points
 

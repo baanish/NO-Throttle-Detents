@@ -80,7 +80,8 @@ public static class ThrottleBoundaryHold
 {
     // A normal, non-subnormal float-sized offset avoids equality-triggered consumers
     // without producing a visible gap from idle or full dry power.
-    public const double InwardOffset = 0.000001;
+    public const double InwardOffset = 0.0001;
+    private const double ParkedValueTolerance = 0.00005;
 
     /// <summary>
     /// Passes throttle through untouched unless a locked boundary applies and the command is still
@@ -97,9 +98,11 @@ public static class ThrottleBoundaryHold
 
         var requested = SimulatedThrottleMapping.ClampPublic(input.RequestedThrottle);
         var epsilon = Math.Max(0, input.EndpointEpsilon);
+        var idleParked = Math.Abs(requested - (input.IdleBoundary + InwardOffset)) <= ParkedValueTolerance;
         var holdIdle = input.IdleApplies &&
                        input.IdleState != EndpointDetentState.Unlocked &&
-                       input.Command != ThrottleCommand.Increase &&
+                       (input.Command == ThrottleCommand.Decrease ||
+                        input.Command == ThrottleCommand.Neutral && idleParked) &&
                        requested <= input.IdleBoundary + epsilon;
         if (holdIdle)
         {
@@ -114,9 +117,11 @@ public static class ThrottleBoundaryHold
                 shouldPinSimulatedThrottle: input.RelativeThrottleMode);
         }
 
+        var afterburnerParked = Math.Abs(requested - (input.AfterburnerBoundary - InwardOffset)) <= ParkedValueTolerance;
         var holdAfterburner = input.AfterburnerApplies &&
                               input.AfterburnerState != EndpointDetentState.Unlocked &&
-                              input.Command != ThrottleCommand.Decrease &&
+                              (input.Command == ThrottleCommand.Increase ||
+                               input.Command == ThrottleCommand.Neutral && afterburnerParked) &&
                               requested >= input.AfterburnerBoundary - epsilon;
         if (holdAfterburner)
         {
