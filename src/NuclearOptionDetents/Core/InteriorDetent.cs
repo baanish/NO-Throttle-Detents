@@ -68,8 +68,8 @@ internal sealed class InteriorDetentRuntime
     private readonly double[] _dryPercents;
     private readonly bool[] _unlocked;
     private readonly double _holdDurationSeconds;
-    private readonly double _crossingEpsilon;
-    private readonly double _resetHysteresis;
+    private double _crossingEpsilon;
+    private double _resetHysteresis;
     private bool _hasLastThrottle;
     private double _lastThrottle;
     private int _activeIndex = -1;
@@ -108,6 +108,12 @@ internal sealed class InteriorDetentRuntime
     }
 
     public int Count => _boundaries.Length;
+
+    public void Reconfigure(double crossingEpsilon, double resetHysteresis)
+    {
+        _crossingEpsilon = Math.Max(0, crossingEpsilon);
+        _resetHysteresis = Math.Max(_crossingEpsilon, resetHysteresis);
+    }
 
     public InteriorDetentSnapshot Update(in InteriorDetentInput input)
     {

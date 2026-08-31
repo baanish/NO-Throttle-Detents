@@ -75,12 +75,15 @@ internal sealed class DetentHudIndicator
             return;
         }
 
-        _displayAircraft = aircraft;
-        _displayGauge = gauge;
         if (TryGetDryDisplayRange(gauge!, out var start, out var end))
         {
+            _displayAircraft = aircraft;
+            _displayGauge = gauge;
             RuntimeController.SetCustomThrottleDisplayRange(aircraft!, start, end);
+            return;
         }
+
+        RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
     }
 
     /// <summary>
@@ -276,7 +279,7 @@ internal sealed class DetentHudIndicator
         if (ThrottleRegionsField?.GetValue(gauge) is not Array regions ||
             RegionShowPercentField is null || RegionStartField is null || RegionEndField is null)
         {
-            return true;
+            return false;
         }
 
         const double dryRangeProbe = 0.5;
@@ -288,8 +291,11 @@ internal sealed class DetentHudIndicator
                 continue;
             }
 
-            var candidateStart = (float)RegionStartField.GetValue(region);
-            var candidateEnd = (float)RegionEndField.GetValue(region);
+            if (RegionStartField.GetValue(region) is not float candidateStart ||
+                RegionEndField.GetValue(region) is not float candidateEnd)
+            {
+                continue;
+            }
             if (candidateEnd > candidateStart &&
                 dryRangeProbe >= candidateStart && dryRangeProbe <= candidateEnd)
             {
@@ -299,6 +305,6 @@ internal sealed class DetentHudIndicator
             }
         }
 
-        return true;
+        return false;
     }
 }

@@ -24,7 +24,7 @@ internal sealed class ModConfig
             "RuntimeStatus",
             "Open the in-game Configuration Manager to see the live check.",
             Describe(
-                "Best-effort compatibility check for the current aircraft; LIKELY is not an in-flight test.",
+                "Detected capabilities and enabled custom detents for the current aircraft.",
                 "Current Aircraft",
                 100,
                 customDrawer: DrawRuntimeStatus,

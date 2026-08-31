@@ -125,7 +125,7 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Relative throttle only");
         }
 
-        if (!input.AircraftCapabilitiesKnown)
+        if (!input.AircraftCapabilitiesKnown && !input.InteriorDetentsEnabled)
         {
             return Result(RuntimeReadinessState.Caution, "CAUTION - Systems not confirmed");
         }
@@ -165,19 +165,31 @@ internal static class RuntimeReadinessPolicy
 
         if (input.InteriorDetentsEnabled)
         {
-            return idleApplies || afterburnerApplies
-                ? Result(RuntimeReadinessState.Likely, "LIKELY - Preset and custom detents")
-                : Result(RuntimeReadinessState.Likely, "LIKELY - Custom detents");
+            if (idleApplies && afterburnerApplies)
+            {
+                return Result(
+                    RuntimeReadinessState.Likely,
+                    "Detected airbrake and afterburner | Custom detents enabled");
+            }
+
+            if (idleApplies)
+            {
+                return Result(RuntimeReadinessState.Likely, "Detected airbrake | Custom detents enabled");
+            }
+
+            return afterburnerApplies
+                ? Result(RuntimeReadinessState.Likely, "Detected afterburner | Custom detents enabled")
+                : Result(RuntimeReadinessState.Likely, "Custom detents enabled");
         }
 
         if (idleApplies && afterburnerApplies)
         {
-            return Result(RuntimeReadinessState.Likely, "LIKELY - Airbrake and afterburner");
+            return Result(RuntimeReadinessState.Likely, "Detected airbrake and afterburner");
         }
 
         return idleApplies
-            ? Result(RuntimeReadinessState.Likely, "LIKELY - Airbrake detent")
-            : Result(RuntimeReadinessState.Likely, "LIKELY - Afterburner detent");
+            ? Result(RuntimeReadinessState.Likely, "Detected airbrake")
+            : Result(RuntimeReadinessState.Likely, "Detected afterburner");
     }
 
     private static RuntimeReadinessResult Result(RuntimeReadinessState state, string displayText) =>

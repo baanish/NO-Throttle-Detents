@@ -111,7 +111,6 @@ Enabled = true
 HoldMilliseconds = 200
 
 [Custom Aircraft]
-ProfilesMigrated = true
 DetectedAircraft =
 SelectedAircraftId =
 

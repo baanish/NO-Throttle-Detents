@@ -8,7 +8,7 @@
 - Adds Reset Profile to restore only the selected aircraft's custom settings.
 - Adds up to eight custom interior detents per aircraft profile. Positions use idle-to-MIL percentages, work in both directions, share that profile's hold time, and appear on the flight HUD.
 - Keeps the add-on mods optional: Nuclear Option Detents has no Blueprinter or aircraft-mod assembly dependency.
-- A manual pass loaded all six aircraft and confirmed the expected live components without a Detents exception. An MC-260 ground-roll check also confirmed its separate Brake-plus-throttle reverser still works.
+- Live checks on Nuclear Option 0.34.2, Steam build 24724372, loaded all six add-on aircraft and confirmed the expected components without a Detents exception. The OA-27 held a custom 67% detent, and an MC-260 ground roll confirmed its separate Brake-plus-throttle reverser still works.
 
 ## 0.3.0
 

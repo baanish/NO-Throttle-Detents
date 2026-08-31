@@ -40,6 +40,7 @@ internal static class RuntimeController
     private static bool _localCollective;
     private static AirframePreset? _activePreset;
     private static double[] _customDryDetentFractions = Array.Empty<double>();
+    private static bool _customDisplayRangeKnown;
     private static double _customDisplayStart;
     private static double _customDisplayEnd = 1;
     private static string _airframeId = string.Empty;
@@ -92,13 +93,13 @@ internal static class RuntimeController
                     _idleGateActive,
                     _afterburnerGateActive,
                     hasPlayerAircraft,
-                    _activePreset is not null || _customDryDetentFractions.Length > 0,
+                    _activePreset is not null || CustomDetentsApply(),
                     _localCollective,
                     PlayerSettings.throttleUseRelative,
                     _aircraftCapabilitiesKnown,
                     _hasAirbrake,
                     _hasAfterburner,
-                    _customDryDetentFractions.Length > 0));
+                    CustomDetentsApply()));
             }
             catch
             {
@@ -133,21 +134,38 @@ internal static class RuntimeController
         start = SimulatedThrottleMapping.ClampPublic(start);
         end = SimulatedThrottleMapping.ClampPublic(end);
         if (end <= start ||
+            _customDisplayRangeKnown &&
             Math.Abs(start - _customDisplayStart) <= 0.000001 &&
             Math.Abs(end - _customDisplayEnd) <= 0.000001)
         {
             return;
         }
 
+        _customDisplayRangeKnown = true;
         _customDisplayStart = start;
         _customDisplayEnd = end;
         RebuildRuntime(ReadSettings());
+        RefreshApplicableCapabilities();
         if (_settings.DebugLogging && _log is not null && _customDryDetentFractions.Length > 0)
         {
             _log.LogInfo(
                 $"Custom detent HUD range for {_airframeId}: " +
                 $"{_customDisplayStart:0.####}..{_customDisplayEnd:0.####}");
         }
+    }
+
+    internal static void ClearCustomThrottleDisplayRange(Aircraft aircraft)
+    {
+        if (!ReferenceEquals(_localAircraft, aircraft) || !_customDisplayRangeKnown)
+        {
+            return;
+        }
+
+        _customDisplayRangeKnown = false;
+        _customDisplayStart = 0;
+        _customDisplayEnd = 1;
+        RebuildRuntime(ReadSettings());
+        RefreshApplicableCapabilities();
     }
 
     /// <summary>Records which patches actually installed; a gate whose patch is missing never claims to be active.</summary>
@@ -223,6 +241,9 @@ internal static class RuntimeController
                 _lastObservedFrame = -1;
                 _hasEffectiveSimulatedThrottle = false;
                 _indicator = DetentIndicatorSnapshot.Hidden;
+                _customDisplayRangeKnown = false;
+                _customDisplayStart = 0;
+                _customDisplayEnd = 1;
                 ResolveAirframeIdentity(aircraft!);
                 settings = ReadSettings();
                 _settings = settings;
@@ -297,7 +318,7 @@ internal static class RuntimeController
                                  !autoHoverEnabled && !foreignThrottleControl;
             var idleApplies = settings.IdleEnabled && _hasAirbrake;
             var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
-            var customDetentsApply = _customDryDetentFractions.Length > 0;
+            var customDetentsApply = CustomDetentsApply();
 
             var hasLiveDetentCapability = _hasAirbrake || _hasAfterburner || customDetentsApply;
             var sensitivityEnabled = settings.ThrottleSensitivity != 1f &&
@@ -326,11 +347,33 @@ internal static class RuntimeController
                 inputs.throttle = requestedThrottle;
             }
 
+            var interiorHold = _interiorDetents.Update(new InteriorDetentInput(
+                simulationTime,
+                requestedThrottle,
+                effectiveSimulatedThrottle,
+                command,
+                simulatedThrottleRange,
+                enabled: settings.Enabled && detentsAllowed && customDetentsApply,
+                relativeThrottleMode: relativeThrottle,
+                controlsEnabled,
+                paused,
+                axisModifierHeld));
+            if (interiorHold.IsHeld)
+            {
+                requestedThrottle = (float)interiorHold.EffectiveThrottle;
+                inputs.throttle = requestedThrottle;
+            }
+            if (interiorHold.ShouldPinSimulatedThrottle)
+            {
+                effectiveSimulatedThrottle = interiorHold.SimulatedThrottle;
+                simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
+            }
+
             var snapshot = _runtime.Update(new DetentRuntimeInput(
                 simulationTime,
                 requestedThrottle,
                 command,
-                settings.Enabled && detentsAllowed,
+                settings.Enabled && detentsAllowed && !interiorHold.IsHeld,
                 idleApplies,
                 afterburnerApplies,
                 controlsEnabled,
@@ -346,7 +389,7 @@ internal static class RuntimeController
                 _runtime.IdleDetent.Boundary,
                 _runtime.AfterburnerDetent.Boundary,
                 settings.EndpointEpsilon,
-                settings.Enabled && detentsAllowed,
+                settings.Enabled && detentsAllowed && !interiorHold.IsHeld,
                 relativeThrottle,
                 simulatedThrottleRange,
                 controlsEnabled,
@@ -361,27 +404,6 @@ internal static class RuntimeController
             if (boundaryHold.ShouldPinSimulatedThrottle)
             {
                 effectiveSimulatedThrottle = boundaryHold.SimulatedThrottle;
-                simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
-            }
-
-            var interiorHold = _interiorDetents.Update(new InteriorDetentInput(
-                simulationTime,
-                inputs.throttle,
-                effectiveSimulatedThrottle,
-                command,
-                simulatedThrottleRange,
-                enabled: settings.Enabled && detentsAllowed && customDetentsApply && !boundaryHold.IsHeld,
-                relativeThrottleMode: relativeThrottle,
-                controlsEnabled,
-                paused,
-                axisModifierHeld));
-            if (interiorHold.IsHeld)
-            {
-                inputs.throttle = (float)interiorHold.EffectiveThrottle;
-            }
-            if (interiorHold.ShouldPinSimulatedThrottle)
-            {
-                effectiveSimulatedThrottle = interiorHold.SimulatedThrottle;
                 simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
             }
 
@@ -457,6 +479,7 @@ internal static class RuntimeController
         _localCollective = false;
         _activePreset = null;
         _customDryDetentFractions = Array.Empty<double>();
+        _customDisplayRangeKnown = false;
         _customDisplayStart = 0;
         _customDisplayEnd = 1;
         _airframeId = string.Empty;
@@ -512,6 +535,9 @@ internal static class RuntimeController
                             _settings.AfterburnerHoldMilliseconds != settings.AfterburnerHoldMilliseconds ||
                             !_settings.EndpointEpsilon.Equals(settings.EndpointEpsilon) ||
                             !_settings.ResetHysteresis.Equals(settings.ResetHysteresis);
+        var interiorTimingChanged = !_hasSettings ||
+                                    !_settings.EndpointEpsilon.Equals(settings.EndpointEpsilon) ||
+                                    !_settings.ResetHysteresis.Equals(settings.ResetHysteresis);
         _settings = settings;
         _hasSettings = true;
         if (customAirframeChanged && !ReferenceEquals(_localAircraft, null))
@@ -533,6 +559,11 @@ internal static class RuntimeController
                 settings.ResetHysteresis);
         }
 
+        if (interiorTimingChanged)
+        {
+            _interiorDetents.Reconfigure(settings.EndpointEpsilon, settings.ResetHysteresis);
+        }
+
         RefreshApplicableCapabilities();
     }
 
@@ -551,7 +582,7 @@ internal static class RuntimeController
             idleBoundary,
             afterburnerBoundary);
         _interiorDetents = new InteriorDetentRuntime(
-            _customDryDetentFractions,
+            _customDisplayRangeKnown ? _customDryDetentFractions : Array.Empty<double>(),
             _customDisplayStart,
             _customDisplayEnd,
             settings.CustomAirframe.DryDetentHoldMilliseconds,
@@ -594,7 +625,10 @@ internal static class RuntimeController
     private static bool AirframeAllowsDetents() =>
         !_localCollective &&
         (AirframePresetCatalog.SupportsDetents(_activePreset, runtimeCollective: false) ||
-         _customDryDetentFractions.Length > 0);
+         CustomDetentsApply());
+
+    private static bool CustomDetentsApply() =>
+        _customDisplayRangeKnown && _customDryDetentFractions.Length > 0;
 
     private static void RefreshApplicableCapabilities()
     {
@@ -623,7 +657,7 @@ internal static class RuntimeController
         _afterburnerGateActive = _throttleObserverActive && _hasAfterburner;
         _aircraftCapabilitiesKnown = _hasSettings &&
             (_activePreset is null
-                ? _customDryDetentFractions.Length > 0
+                ? CustomDetentsApply()
                 : RuntimeReadinessPolicy.AreEnabledCapabilitiesKnown(
                     hasPreset: true,
                     _settings.IdleEnabled,

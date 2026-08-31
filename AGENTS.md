@@ -27,10 +27,12 @@ add infrastructure to make a prototype look production-ready.
 
 ## Invariants
 
-- Unknown/new aircraft, collective controls, absolute/HOTAS mode, and absent
-  systems remain vanilla.
-- Presets are keyed by `UnitDefinition.jsonKey`; runtime discovery can confirm
-  an expected capability but cannot expand the preset set.
+- Unknown/new aircraft remain vanilla unless the player enables an exact-ID
+  custom profile. Collective controls, absolute/HOTAS mode, and absent systems
+  always remain vanilla.
+- Built-in presets are keyed by `UnitDefinition.jsonKey`; runtime discovery
+  cannot add one automatically. A player may opt an unknown aircraft into an
+  exact-ID custom profile, which still requires matching local components.
 - Afterburner code may only suppress an existing vanilla `true` decision.
 - AB-4 requires all four expected afterburner nozzles to match the preset.
 - Release packages ship with `DebugLogging = false`.

@@ -51,11 +51,6 @@ internal sealed class CustomAircraftProfiles
                     Order = 100,
                 }));
 
-        MigrateSingleProfile(config.Bind(
-            EditorSection,
-            "ProfilesMigrated",
-            false,
-            Hidden("Internal migration marker.")));
         EnsureSelection();
     }
 
@@ -332,33 +327,6 @@ internal sealed class CustomAircraftProfiles
         _selectedAircraft.Value = identities.Count == 0 ? string.Empty : identities[0].Id;
     }
 
-    private void MigrateSingleProfile(ConfigEntry<bool> migrationComplete)
-    {
-        if (migrationComplete.Value)
-        {
-            return;
-        }
-
-        var legacy = LegacyEntries.Bind(_config);
-        if (!string.IsNullOrWhiteSpace(legacy.AircraftId.Value))
-        {
-            var id = legacy.AircraftId.Value.Trim();
-            var wasKnown = _catalog.Contains(id);
-            Register(id, id);
-            if (!wasKnown)
-            {
-                legacy.CopyTo(_profiles[id]);
-            }
-        }
-
-        foreach (var definition in legacy.Definitions)
-        {
-            _config.Remove(definition);
-        }
-        migrationComplete.Value = true;
-        _config.Save();
-    }
-
     private static ConfigDescription Hidden(
         string description,
         AcceptableValueBase? acceptableValues = null) =>
@@ -434,78 +402,4 @@ internal sealed class CustomAircraftProfiles
                 : Math.Max(minimum, Math.Min(maximum, value));
     }
 
-    private sealed class LegacyEntries
-    {
-        private LegacyEntries(
-            ConfigEntry<bool> enabled,
-            ConfigEntry<string> aircraftId,
-            ConfigEntry<AirbrakePath> airbrakePath,
-            ConfigEntry<bool> hasAfterburner,
-            ConfigEntry<int> afterburnerNozzleCount,
-            ConfigEntry<float> afterburnerStart,
-            ConfigEntry<float> afterburnerEnd,
-            ConfigEntry<string> dryDetentPercentages,
-            ConfigEntry<int> dryDetentHoldMilliseconds)
-        {
-            Enabled = enabled;
-            AircraftId = aircraftId;
-            AirbrakePath = airbrakePath;
-            HasAfterburner = hasAfterburner;
-            AfterburnerNozzleCount = afterburnerNozzleCount;
-            AfterburnerStart = afterburnerStart;
-            AfterburnerEnd = afterburnerEnd;
-            DryDetentPercentages = dryDetentPercentages;
-            DryDetentHoldMilliseconds = dryDetentHoldMilliseconds;
-        }
-
-        public ConfigEntry<bool> Enabled { get; }
-        public ConfigEntry<string> AircraftId { get; }
-        public ConfigEntry<AirbrakePath> AirbrakePath { get; }
-        public ConfigEntry<bool> HasAfterburner { get; }
-        public ConfigEntry<int> AfterburnerNozzleCount { get; }
-        public ConfigEntry<float> AfterburnerStart { get; }
-        public ConfigEntry<float> AfterburnerEnd { get; }
-        public ConfigEntry<string> DryDetentPercentages { get; }
-        public ConfigEntry<int> DryDetentHoldMilliseconds { get; }
-
-        public IEnumerable<ConfigDefinition> Definitions
-        {
-            get
-            {
-                yield return Enabled.Definition;
-                yield return AircraftId.Definition;
-                yield return AirbrakePath.Definition;
-                yield return HasAfterburner.Definition;
-                yield return AfterburnerNozzleCount.Definition;
-                yield return AfterburnerStart.Definition;
-                yield return AfterburnerEnd.Definition;
-                yield return DryDetentPercentages.Definition;
-                yield return DryDetentHoldMilliseconds.Definition;
-            }
-        }
-
-        public static LegacyEntries Bind(ConfigFile config) =>
-            new(
-                config.Bind(EditorSection, "Enabled", false, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "AircraftId", string.Empty, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "AirbrakePath", NuclearOptionDetents.Core.AirbrakePath.None, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "HasAfterburner", false, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "AfterburnerNozzleCount", 1, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "AfterburnerStart", 0.9f, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "AfterburnerEnd", 1f, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "DryDetentPercentages", string.Empty, Hidden("Legacy setting.")),
-                config.Bind(EditorSection, "DryDetentHoldMilliseconds", 200, Hidden("Legacy setting.")));
-
-        public void CopyTo(ProfileEntries profile)
-        {
-            profile.Enabled.Value = Enabled.Value;
-            profile.AirbrakePath.Value = AirbrakePath.Value;
-            profile.HasAfterburner.Value = HasAfterburner.Value;
-            profile.AfterburnerNozzleCount.Value = AfterburnerNozzleCount.Value;
-            profile.AfterburnerStart.Value = AfterburnerStart.Value;
-            profile.AfterburnerEnd.Value = AfterburnerEnd.Value;
-            profile.DryDetentPercentages.Value = DryDetentPercentages.Value;
-            profile.DryDetentHoldMilliseconds.Value = DryDetentHoldMilliseconds.Value;
-        }
-    }
 }
