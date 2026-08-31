@@ -4,6 +4,7 @@
 
 - Replaces the ambiguous absolute-throttle status with a direct instruction to enable `Use Throttle Relative Axis`.
 - Records `throttleUseRelative` when Detents attaches and whenever the setting changes during a flight.
+- A manual check on Nuclear Option 0.34.2 with the AB-4 confirmed the new status in absolute mode and the debug transition after enabling relative throttle.
 
 ## 0.4.0
 
