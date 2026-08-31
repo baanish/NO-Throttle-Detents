@@ -7,6 +7,7 @@ namespace NuclearOptionDetents.Config;
 // Keeping the soft contract local avoids a runtime dependency on that plugin.
 internal sealed class ConfigurationManagerAttributes
 {
+    public bool? Browsable;
     public Action<ConfigEntryBase>? CustomDrawer;
     public string? DispName;
     public bool? HideDefaultButton;

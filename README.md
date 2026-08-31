@@ -27,20 +27,24 @@ until you move away from that end again. Both hold times are configurable
 ![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
 
 The mod only touches the local player's relative-throttle input. It
-recognizes 13 aircraft and activates detents on 8 (listed in
+recognizes 19 aircraft and activates detents on 14 (listed in
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
-afterburner on by itself. Absolute/HOTAS throttle mode, helicopters,
-unknown aircraft, AI, and remote aircraft are untouched, as are weapons and
+afterburner on by itself. Absolute/HOTAS throttle mode, helicopters, AI, and
+remote aircraft are untouched, as are weapons and
 networking. Multiplayer use is unverified, and hosts or server moderators may
 prohibit BepInEx or this mod.
+
+The Aircraft Profile menu lists every aircraft in the game's installed
+catalog. An opt-in profile can support an unknown aircraft or add interior
+detents to a built-in aircraft. Unknown aircraft without an enabled profile
+stay vanilla. Built-in add-on presets cover the MC-260 Chimera, F-16M King
+Viper, F-99 Shrike, FS-41 Eclipse, OA-27 Cavalier, and FS-3 Ternion.
 
 Auto Hover temporarily bypasses both detents and the sensitivity multiplier;
 turning it off restores them for the local aircraft.
 
-This is a v0.3 prototype. Installed-build notes for contributors are in
+This is a v0.4 prototype. Installed-build notes for contributors are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
-
-![Nuclear Option Detents configuration panel](docs/screenshots/config-detents.png)
 
 ## Install
 
@@ -106,6 +110,11 @@ HoldMilliseconds = 200
 Enabled = true
 HoldMilliseconds = 200
 
+[Custom Aircraft]
+ProfilesMigrated = true
+DetectedAircraft =
+SelectedAircraftId =
+
 [Advanced]
 CommandThreshold = 0.5
 EndpointEpsilon = 0.001
@@ -127,8 +136,28 @@ multiplayer diagnostic; keep it off during normal play. See
 [docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md) for the two-client
 check and log analyzer.
 
-The mod does not require Configuration Manager. Text-file changes apply on
-the next launch.
+The Aircraft Profile selector lists aircraft in the game's installed-aircraft
+catalog. Entering an aircraft also adds its exact `jsonKey` as a fallback. Each
+aircraft keeps an independent profile. Selecting a profile changes only which
+profile the menu edits. The runtime always uses the profile matching the local
+aircraft. Reset Profile restores only that profile. Choose the airbrake
+type and, when applicable, enter the live afterburner nozzle count and range.
+Those components must still match before an endpoint detent can run.
+
+![Aircraft Profile selector showing installed aircraft and custom settings](docs/screenshots/config-aircraft-profiles.png)
+
+Each profile accepts up to eight comma-separated custom detent positions, such
+as `67,82.5`. These are the percentages shown on the cockpit throttle gauge.
+The mod reads that gauge's dry-throttle range for the active aircraft so its
+hold label and the cockpit number agree. Custom detents stop travel in both
+directions and share that profile's hold time. Values must be greater than 0
+and less than 100. A malformed list disables the custom detents.
+
+![Custom 67 percent detent holding on the OA-27 flight HUD](docs/screenshots/hud-custom-detent.png)
+
+The mod does not require Configuration Manager. Cataloged aircraft get a
+generated `[Custom Aircraft Profile ...]` section that can be edited in the
+config file; text-file changes apply on the next launch.
 
 PauelsRandomFixes' ThrottleRelativeVelocity is supported. While that fix is
 active, its Relative Sensitivity setting takes priority and this mod's

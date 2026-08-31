@@ -15,6 +15,7 @@ internal sealed class ModConfig
     private const string IdleSection = "Idle / Airbrake Detent";
     private const string AfterburnerSection = "Full Dry / Afterburner Detent";
     private const string AdvancedSection = "Advanced";
+    private readonly CustomAircraftProfiles _customAircraftProfiles;
 
     public ModConfig(ConfigFile config)
     {
@@ -113,6 +114,7 @@ internal sealed class ModConfig
                 "Afterburner Hold Time (ms)",
                 90,
                 new AcceptableValueRange<int>(0, 2000)));
+        _customAircraftProfiles = new CustomAircraftProfiles(config);
         CommandThreshold = config.Bind(
             AdvancedSection,
             "CommandThreshold",
@@ -181,13 +183,22 @@ internal sealed class ModConfig
     private static void DrawRuntimeStatus(ConfigEntryBase _)
     {
         var readiness = RuntimeController.BestEffortReadiness;
+        var aircraft = string.IsNullOrWhiteSpace(RuntimeController.CurrentAircraftId)
+            ? RuntimeController.CurrentAircraftDisplayName
+            : $"{RuntimeController.CurrentAircraftDisplayName} ({RuntimeController.CurrentAircraftId})";
         GUILayout.Label(
-            $"{RuntimeController.CurrentAircraftDisplayName} | {readiness.DisplayText}",
+            $"{aircraft} | {readiness.DisplayText}",
             GUILayout.ExpandWidth(true));
     }
 
     /// <summary>Clamps every entry on read, so a hand-edited config file cannot push the runtime outside its tested ranges.</summary>
-    public EffectiveSettings ReadEffective()
+    public void RegisterDetectedAircraft(string id, string displayName) =>
+        _customAircraftProfiles.Register(id, displayName);
+
+    public void RefreshInstalledAircraft() =>
+        _customAircraftProfiles.RefreshInstalledAircraft();
+
+    public EffectiveSettings ReadEffective(string aircraftId = "")
     {
         var epsilon = Clamp(EndpointEpsilon.Value, 0.00001f, 0.05f);
         var hysteresis = Math.Max(epsilon, Clamp(ResetHysteresis.Value, 0.001f, 0.10f));
@@ -202,7 +213,8 @@ internal sealed class ModConfig
             Clamp(AfterburnerHoldMilliseconds.Value, 0, 2000),
             Clamp(CommandThreshold.Value, 0.1f, 1f),
             epsilon,
-            hysteresis);
+            hysteresis,
+            _customAircraftProfiles.Read(aircraftId));
     }
 
     private static int Clamp(int value, int minimum, int maximum) =>

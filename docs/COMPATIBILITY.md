@@ -44,6 +44,7 @@ updates. After a game update, recheck these targets and run the mod.
 - ControlSurface max-split field: `System.Single ControlSurface::maxSplit`
 - Flight HUD center: `UnityEngine.Transform FlightHud::GetHUDCenter()`
 - Flight HUD throttle label: `TMPro.TextMeshProUGUI ThrottleGauge::throttleLabel`
+- Flight HUD percentage regions: `ThrottleGauge/ThrottleRegion[] ThrottleGauge::throttleRegions` -> `showPercent`, `start`, and `end`
 
 Network Validation also reads the public owner route on human aircraft plus
 `Airbrake.active`, `Airbrake.openAmount`, `ControlSurface.splitAmount`, and

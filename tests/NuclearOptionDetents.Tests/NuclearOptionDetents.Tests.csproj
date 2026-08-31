@@ -14,6 +14,9 @@
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleBoundaryHold.cs" Link="Core\ThrottleBoundaryHold.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\RuntimeReadiness.cs" Link="Core\RuntimeReadiness.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\AirframePreset.cs" Link="Core\AirframePreset.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\CustomAirframeConfig.cs" Link="Core\CustomAirframeConfig.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\DetectedAircraftCatalog.cs" Link="Core\DetectedAircraftCatalog.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\InteriorDetent.cs" Link="Core\InteriorDetent.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentTiming.cs" Link="Core\DetentTiming.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetentIndicator.cs" Link="Core\DetentIndicator.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\RelativeThrottleSensitivity.cs" Link="Core\RelativeThrottleSensitivity.cs" />

@@ -1,4 +1,5 @@
 using System;
+using NuclearOptionDetents.Core;
 
 namespace NuclearOptionDetents.Config;
 
@@ -16,12 +17,13 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         int afterburnerHoldMilliseconds,
         float commandThreshold,
         float endpointEpsilon,
-        float resetHysteresis)
+        float resetHysteresis,
+        CustomAirframeConfig customAirframe)
     {
         (Enabled, DebugLogging, IndicatorEnabled, ThrottleSensitivity, IdleEnabled, IdleHoldMilliseconds, AfterburnerEnabled,
-            AfterburnerHoldMilliseconds, CommandThreshold, EndpointEpsilon, ResetHysteresis) =
+            AfterburnerHoldMilliseconds, CommandThreshold, EndpointEpsilon, ResetHysteresis, CustomAirframe) =
             (enabled, debugLogging, indicatorEnabled, throttleSensitivity, idleEnabled, idleHoldMilliseconds, afterburnerEnabled,
-                afterburnerHoldMilliseconds, commandThreshold, endpointEpsilon, resetHysteresis);
+                afterburnerHoldMilliseconds, commandThreshold, endpointEpsilon, resetHysteresis, customAirframe);
     }
 
     public bool Enabled { get; }
@@ -36,6 +38,7 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
     public float CommandThreshold { get; }
     public float EndpointEpsilon { get; }
     public float ResetHysteresis { get; }
+    public CustomAirframeConfig CustomAirframe { get; }
 
     public bool Equals(EffectiveSettings other) =>
         Enabled == other.Enabled &&
@@ -48,7 +51,8 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         AfterburnerHoldMilliseconds == other.AfterburnerHoldMilliseconds &&
         CommandThreshold.Equals(other.CommandThreshold) &&
         EndpointEpsilon.Equals(other.EndpointEpsilon) &&
-        ResetHysteresis.Equals(other.ResetHysteresis);
+        ResetHysteresis.Equals(other.ResetHysteresis) &&
+        CustomAirframe.Equals(other.CustomAirframe);
 
     public override bool Equals(object? obj) => obj is EffectiveSettings other && Equals(other);
 
@@ -66,7 +70,8 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
             hash = (hash * 397) ^ AfterburnerHoldMilliseconds;
             hash = (hash * 397) ^ CommandThreshold.GetHashCode();
             hash = (hash * 397) ^ EndpointEpsilon.GetHashCode();
-            return (hash * 397) ^ ResetHysteresis.GetHashCode();
+            hash = (hash * 397) ^ ResetHysteresis.GetHashCode();
+            return (hash * 397) ^ CustomAirframe.GetHashCode();
         }
     }
 

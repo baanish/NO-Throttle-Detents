@@ -191,12 +191,18 @@ internal static class AirframePresetCatalog
     private static readonly AirframePreset[] Presets =
     {
         new("AttackHelo1", "SAH-46 Chicane", true, AirbrakePath.None, false, null, null, null, null),
+        new("Aryx_CargoPlane1", "MC-260 Chimera", false, AirbrakePath.Split, false, 0f, null, null, null),
+        new("Aryx_F16M_KingViper", "F-16M King Viper", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
+        new("Aryx_Interceptor1", "FS-41 Eclipse", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
+        new("Aryx_LightFighter1", "F-99 Shrike", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
+        new("Aryx_PropAttacker1", "OA-27 Cavalier", false, AirbrakePath.Split, false, 0f, null, null, null),
         new("CAS1", "A-19 Brawler", false, AirbrakePath.Split, false, 0f, null, null, null),
         new("COIN", "CI-22 Cricket", false, AirbrakePath.None, false, null, null, null, null),
         new("Darkreach", "SFB-81 Darkreach", false, AirbrakePath.Split, false, 0f, null, null, null),
         new("EW1", "EW-25 Medusa", false, AirbrakePath.None, false, null, null, null, null),
         new("FastBomber1", "Alkyon AB-4", false, AirbrakePath.Split, true, 0f, 4, 0.9f, 1f),
         new("Multirole1", "KR-67 Ifrit", false, AirbrakePath.Split, true, 0f, 2, 0.9f, 1f),
+        new("P_Trisurface1", "FS-3 Ternion", false, AirbrakePath.Split, true, 0f, 2, 0.9f, 1f),
         new("QuadVTOL1", "VL-49 Tarantula", true, AirbrakePath.None, false, null, null, null, null),
         new("Fighter1", "FS-12 Revoker", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
         new("SmallFighter1", "FS-20 Vortex", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
@@ -218,6 +224,17 @@ internal static class AirframePresetCatalog
         }
 
         return PresetsById.TryGetValue(id, out preset!);
+    }
+
+    /// <summary>Built-ins win; a matching custom profile is only a fallback for an otherwise unknown ID.</summary>
+    public static bool TryGet(string id, CustomAirframeConfig custom, out AirframePreset preset)
+    {
+        if (TryGet(id, out preset))
+        {
+            return true;
+        }
+
+        return custom.Matches(id) && custom.TryCreatePreset(out preset);
     }
 
     /// <summary>

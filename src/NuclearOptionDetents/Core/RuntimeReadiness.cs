@@ -28,16 +28,17 @@ internal readonly struct RuntimeReadinessInput
         bool relativeThrottleMode,
         bool aircraftCapabilitiesKnown,
         bool hasAirbrake,
-        bool hasAfterburner)
+        bool hasAfterburner,
+        bool interiorDetentsEnabled = false)
     {
         (MasterEnabled, IdleEnabled, AfterburnerEnabled, PatchStatusKnown,
             ThrottleObserverActive, IdleGateActive, AfterburnerGateActive,
             HasPlayerAircraft, AirframeSupported, IsCollective, RelativeThrottleMode,
-            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner) =
+            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled) =
             (masterEnabled, idleEnabled, afterburnerEnabled, patchStatusKnown,
                 throttleObserverActive, idleGateActive, afterburnerGateActive,
                 hasPlayerAircraft, airframeSupported, isCollective, relativeThrottleMode,
-                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner);
+                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled);
     }
 
     public bool MasterEnabled { get; }
@@ -54,6 +55,7 @@ internal readonly struct RuntimeReadinessInput
     public bool AircraftCapabilitiesKnown { get; }
     public bool HasAirbrake { get; }
     public bool HasAfterburner { get; }
+    public bool InteriorDetentsEnabled { get; }
 }
 
 internal readonly struct RuntimeReadinessResult
@@ -88,7 +90,7 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.Off, "OFF - Mod disabled");
         }
 
-        if (!input.IdleEnabled && !input.AfterburnerEnabled)
+        if (!input.IdleEnabled && !input.AfterburnerEnabled && !input.InteriorDetentsEnabled)
         {
             return Result(RuntimeReadinessState.Off, "OFF - Both detents disabled");
         }
@@ -130,7 +132,7 @@ internal static class RuntimeReadinessPolicy
 
         var idleApplies = input.IdleEnabled && input.HasAirbrake;
         var afterburnerApplies = input.AfterburnerEnabled && input.HasAfterburner;
-        if (!idleApplies && !afterburnerApplies)
+        if (!idleApplies && !afterburnerApplies && !input.InteriorDetentsEnabled)
         {
             if (!input.HasAirbrake && !input.HasAfterburner)
             {
@@ -159,6 +161,13 @@ internal static class RuntimeReadinessPolicy
             var state = idleApplies ? RuntimeReadinessState.Partial : RuntimeReadinessState.No;
             var prefix = state == RuntimeReadinessState.Partial ? "PARTIAL" : "NO";
             return Result(state, $"{prefix} - Afterburner detent unavailable");
+        }
+
+        if (input.InteriorDetentsEnabled)
+        {
+            return idleApplies || afterburnerApplies
+                ? Result(RuntimeReadinessState.Likely, "LIKELY - Preset and custom detents")
+                : Result(RuntimeReadinessState.Likely, "LIKELY - Custom detents");
         }
 
         if (idleApplies && afterburnerApplies)

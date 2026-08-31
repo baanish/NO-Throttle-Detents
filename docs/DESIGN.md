@@ -12,10 +12,10 @@ resumes.
 
 Absolute/HOTAS mode and collective aircraft are pass-through paths. Unknown
 aircraft and capabilities marked absent in the explicit preset table are also
-vanilla. The throttle observer requires the game to identify the selected
-aircraft as local before it writes anything. AI, remote aircraft, missiles,
-spectators, networking, damage, weapons, and aircraft definitions remain
-vanilla.
+vanilla unless the user enables an exact-ID custom profile. The throttle
+observer requires the game to identify the selected aircraft as local before
+it writes anything. AI, remote aircraft, missiles, spectators, networking,
+damage, weapons, and aircraft definitions remain vanilla.
 
 ## Detent state
 
@@ -27,6 +27,12 @@ opposite command, or a lost input reference cancels an unfinished hold and
 leaves the affected path vanilla. Moving away by the configured hysteresis
 relocks an unlocked detent. Scene, aircraft, and mode changes reset both
 detents.
+
+Custom detents use the percentage range shown by the selected aircraft's
+cockpit throttle gauge. They stop crossings in either direction and track
+their release state separately, so nearby positions cannot mask one another.
+Each custom profile matches one exact `UnitDefinition.jsonKey`; malformed
+values disable that aircraft's custom behavior.
 
 Elapsed simulation time controls unlocking, so the result is based on time
 rather than a fixed number of frames. The state machine is intentionally kept
@@ -109,4 +115,9 @@ config and log writes.
 
 Presets are keyed by `UnitDefinition.jsonKey`. Add or change an airframe only
 after recording the installed component shape in [AIRFRAME-PRESETS.md](AIRFRAME-PRESETS.md)
-and adding focused tests. Keep new behavior local and easy to remove.
+and adding focused tests. The profile editor reads the game's installed
+aircraft catalog at startup and whenever its selector opens. Seat entry remains
+a fallback. Each ID has an independent user-defined profile without changing
+the built-in table. The Configuration Manager selection controls only the
+editor; runtime lookup always uses the local aircraft's ID. Keep new behavior
+local and easy to remove.
