@@ -72,6 +72,7 @@ internal sealed class InteriorDetentRuntime
     private double _resetHysteresis;
     private bool _hasLastThrottle;
     private double _lastThrottle;
+    private bool _preserveApproachSide;
     private int _activeIndex = -1;
     private DetentDirection _activeDirection;
     private bool _holding;
@@ -132,6 +133,16 @@ internal sealed class InteriorDetentRuntime
             return PassThrough(input, requested);
         }
 
+        if (!_holding && _preserveApproachSide)
+        {
+            if (input.Command == ThrottleCommand.Neutral)
+            {
+                return PassThrough(input, requested);
+            }
+
+            _preserveApproachSide = false;
+        }
+
         if (_holding)
         {
             if (!ThrottleCommands.IsDirection(input.Command, _activeDirection))
@@ -139,9 +150,15 @@ internal sealed class InteriorDetentRuntime
                 var cancelledIndex = _activeIndex;
                 var cancelledDirection = _activeDirection;
                 CancelHold();
-                Remember(input.Command == ThrottleCommand.Neutral
-                    ? ThrottleOnApproachSide(cancelledIndex, cancelledDirection)
-                    : requested);
+                if (input.Command == ThrottleCommand.Neutral)
+                {
+                    Remember(ThrottleOnApproachSide(cancelledIndex, cancelledDirection));
+                    _preserveApproachSide = true;
+                }
+                else
+                {
+                    Remember(requested);
+                }
                 return PassThrough(input, requested);
             }
 
@@ -301,6 +318,7 @@ internal sealed class InteriorDetentRuntime
     private void ResetState()
     {
         Array.Clear(_unlocked, 0, _unlocked.Length);
+        _preserveApproachSide = false;
         CancelHold();
     }
 

@@ -67,6 +67,7 @@ internal sealed class DetentHudIndicator
         var hud = SceneSingleton<FlightHud>.i;
         if (!IsAlive(hud))
         {
+            RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
             return;
         }
 
@@ -84,6 +85,7 @@ internal sealed class DetentHudIndicator
         if (!IsAlive(gauge))
         {
             _nextDisplayRangeProbeTime = Time.unscaledTime + DisplayRangeRetrySeconds;
+            RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
             return;
         }
 

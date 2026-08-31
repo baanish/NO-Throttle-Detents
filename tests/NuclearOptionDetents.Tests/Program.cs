@@ -78,6 +78,7 @@ internal static class Program
             ("nearby interior detents unlock independently", NearbyInteriorDetentsUnlockIndependently),
             ("interior detent requires a continuous hold", InteriorDetentRequiresContinuousHold),
             ("cancelled interior detent reverses freely", CancelledInteriorDetentReversesFreely),
+            ("repeated neutral preserves interior approach side", RepeatedNeutralPreservesInteriorApproachSide),
             ("interior detent interruption clears crossing history", InteriorDetentInterruptionClearsCrossingHistory),
             ("interior detent reconfigure updates thresholds", InteriorDetentReconfigureUpdatesThresholds),
             ("interior detent precedes endpoint hold", InteriorDetentPrecedesEndpointHold),
@@ -1356,12 +1357,29 @@ internal static class Program
 
     private static void CancelledInteriorDetentReversesFreely()
     {
+        AssertCancelledInteriorDetentReversesFreely(neutralUpdates: 1);
+    }
+
+    private static void RepeatedNeutralPreservesInteriorApproachSide()
+    {
+        AssertCancelledInteriorDetentReversesFreely(neutralUpdates: 2);
+    }
+
+    private static void AssertCancelledInteriorDetentReversesFreely(int neutralUpdates)
+    {
         var upward = new InteriorDetentRuntime(new[] { 0.67 }, 0, 1, 200, 0.001, 0.02);
         upward.Update(InteriorInput(0, 0.65, ThrottleCommand.Neutral));
         var upperHold = upward.Update(InteriorInput(0.01, 0.69, ThrottleCommand.Increase));
         True(upperHold.IsHeld);
-        False(upward.Update(InteriorInput(0.02, upperHold.EffectiveThrottle, ThrottleCommand.Neutral)).IsHeld);
-        var decreased = upward.Update(InteriorInput(0.03, 0.64, ThrottleCommand.Decrease));
+        for (var update = 0; update < neutralUpdates; update++)
+        {
+            False(upward.Update(InteriorInput(
+                0.02 + (update * 0.01),
+                upperHold.EffectiveThrottle,
+                ThrottleCommand.Neutral)).IsHeld);
+        }
+        var reverseTime = 0.02 + (neutralUpdates * 0.01);
+        var decreased = upward.Update(InteriorInput(reverseTime, 0.64, ThrottleCommand.Decrease));
         False(decreased.IsHeld);
         Near(0.64, decreased.EffectiveThrottle);
 
@@ -1369,8 +1387,14 @@ internal static class Program
         downward.Update(InteriorInput(0, 0.69, ThrottleCommand.Neutral));
         var lowerHold = downward.Update(InteriorInput(0.01, 0.65, ThrottleCommand.Decrease));
         True(lowerHold.IsHeld);
-        False(downward.Update(InteriorInput(0.02, lowerHold.EffectiveThrottle, ThrottleCommand.Neutral)).IsHeld);
-        var increased = downward.Update(InteriorInput(0.03, 0.70, ThrottleCommand.Increase));
+        for (var update = 0; update < neutralUpdates; update++)
+        {
+            False(downward.Update(InteriorInput(
+                0.02 + (update * 0.01),
+                lowerHold.EffectiveThrottle,
+                ThrottleCommand.Neutral)).IsHeld);
+        }
+        var increased = downward.Update(InteriorInput(reverseTime, 0.70, ThrottleCommand.Increase));
         False(increased.IsHeld);
         Near(0.70, increased.EffectiveThrottle);
     }
