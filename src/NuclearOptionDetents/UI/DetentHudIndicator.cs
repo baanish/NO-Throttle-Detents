@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using HarmonyLib;
 using NuclearOptionDetents.Core;
@@ -13,18 +14,33 @@ namespace NuclearOptionDetents.UI;
 /// </summary>
 internal sealed class DetentHudIndicator
 {
+    private const float DisplayRangeRetrySeconds = 0.25f;
     private static readonly FieldInfo? ThrottleLabelField =
         AccessTools.DeclaredField(typeof(ThrottleGauge), "throttleLabel");
+    private static readonly FieldInfo? ThrottleRegionsField =
+        AccessTools.DeclaredField(typeof(ThrottleGauge), "throttleRegions");
+    private static readonly Type? ThrottleRegionType = ThrottleRegionsField?.FieldType.GetElementType();
+    private static readonly FieldInfo? RegionShowPercentField =
+        ThrottleRegionType is null ? null : AccessTools.DeclaredField(ThrottleRegionType, "showPercent");
+    private static readonly FieldInfo? RegionStartField =
+        ThrottleRegionType is null ? null : AccessTools.DeclaredField(ThrottleRegionType, "start");
+    private static readonly FieldInfo? RegionEndField =
+        ThrottleRegionType is null ? null : AccessTools.DeclaredField(ThrottleRegionType, "end");
 
     private FlightHud? _hud;
+    private Aircraft? _displayAircraft;
+    private ThrottleGauge? _displayGauge;
+    private float _nextDisplayRangeProbeTime;
     private Transform? _hudCenter;
     private TextMeshProUGUI? _sourceLabel;
     private GameObject? _indicatorObject;
     private TextMeshProUGUI? _indicatorLabel;
     private bool _hasTextKey;
     private bool _lastWasIdle;
+    private bool _lastWasInterior;
     private EndpointDetentState _lastState;
     private int _lastPercent;
+    private double _lastBoundaryPercent;
     private bool _hasStyle;
     private TMP_FontAsset? _lastFont;
     private Material? _lastMaterial;
@@ -36,6 +52,55 @@ internal sealed class DetentHudIndicator
     /// <summary>False when the game build no longer exposes the throttle label with the expected type; the plugin then runs without a HUD indicator.</summary>
     public bool IsAvailable =>
         ThrottleLabelField is not null && ThrottleLabelField.FieldType == typeof(TextMeshProUGUI);
+
+    /// <summary>Reads the local gauge once per aircraft so custom percentages use the same linear region the cockpit displays.</summary>
+    public void SyncThrottleDisplayRange()
+    {
+        var aircraft = RuntimeController.LocalAircraft;
+        if (ReferenceEquals(aircraft, null))
+        {
+            _displayAircraft = null;
+            _displayGauge = null;
+            return;
+        }
+
+        var hud = SceneSingleton<FlightHud>.i;
+        if (!IsAlive(hud))
+        {
+            RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
+            return;
+        }
+
+        var cachedPair = ReferenceEquals(_displayAircraft, aircraft) && IsAlive(_displayGauge);
+        if (cachedPair && RuntimeController.HasCustomThrottleDisplayRange(aircraft!))
+        {
+            return;
+        }
+        if (cachedPair && Time.unscaledTime < _nextDisplayRangeProbeTime)
+        {
+            return;
+        }
+
+        var gauge = hud!.GetComponentInChildren<ThrottleGauge>(true);
+        if (!IsAlive(gauge))
+        {
+            _nextDisplayRangeProbeTime = Time.unscaledTime + DisplayRangeRetrySeconds;
+            RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
+            return;
+        }
+
+        _displayAircraft = aircraft;
+        _displayGauge = gauge;
+        if (TryGetDryDisplayRange(gauge!, out var start, out var end))
+        {
+            _nextDisplayRangeProbeTime = 0f;
+            RuntimeController.SetCustomThrottleDisplayRange(aircraft!, start, end);
+            return;
+        }
+
+        _nextDisplayRangeProbeTime = Time.unscaledTime + DisplayRangeRetrySeconds;
+        RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
+    }
 
     /// <summary>
     /// Called every frame. Text is rewritten only when the displayed line actually changes, and the clone
@@ -57,17 +122,26 @@ internal sealed class DetentHudIndicator
         }
 
         var wasIdle = snapshot.Idle.Visible;
-        var line = wasIdle ? snapshot.Idle : snapshot.Afterburner;
+        var wasInterior = snapshot.Interior.Visible;
+        var line = wasIdle
+            ? snapshot.Idle
+            : wasInterior
+                ? snapshot.Interior
+                : snapshot.Afterburner;
         var percent = line.State == EndpointDetentState.Holding
             ? DetentIndicatorText.RoundedPercent(line.Progress)
             : -1;
-        if (!_hasTextKey || wasIdle != _lastWasIdle || line.State != _lastState || percent != _lastPercent)
+        if (!_hasTextKey || wasIdle != _lastWasIdle || wasInterior != _lastWasInterior ||
+            line.State != _lastState || percent != _lastPercent ||
+            !line.BoundaryPercent.Equals(_lastBoundaryPercent))
         {
             _indicatorLabel!.text = DetentIndicatorText.Format(snapshot);
             _hasTextKey = true;
             _lastWasIdle = wasIdle;
+            _lastWasInterior = wasInterior;
             _lastState = line.State;
             _lastPercent = percent;
+            _lastBoundaryPercent = line.BoundaryPercent;
         }
 
         UpdateStyleAndPosition();
@@ -83,14 +157,19 @@ internal sealed class DetentHudIndicator
         }
 
         _hud = null;
+        _displayAircraft = null;
+        _displayGauge = null;
+        _nextDisplayRangeProbeTime = 0f;
         _hudCenter = null;
         _sourceLabel = null;
         _indicatorObject = null;
         _indicatorLabel = null;
         _hasTextKey = false;
         _lastWasIdle = false;
+        _lastWasInterior = false;
         _lastState = default;
         _lastPercent = 0;
+        _lastBoundaryPercent = 0;
         _hasStyle = false;
         _lastFont = null;
         _lastMaterial = null;
@@ -209,4 +288,40 @@ internal sealed class DetentHudIndicator
     /// <summary>Guards against Unity's destroyed-object sentinel, which is non-null to the CLR but compares equal to null.</summary>
     private static bool IsAlive(UnityEngine.Object? value) =>
         !ReferenceEquals(value, null) && value != null;
+
+    private static bool TryGetDryDisplayRange(ThrottleGauge gauge, out double start, out double end)
+    {
+        start = 0;
+        end = 1;
+        if (ThrottleRegionsField?.GetValue(gauge) is not Array regions ||
+            RegionShowPercentField is null || RegionStartField is null || RegionEndField is null)
+        {
+            return false;
+        }
+
+        const double dryRangeProbe = 0.5;
+        for (var index = 0; index < regions.Length; index++)
+        {
+            var region = regions.GetValue(index);
+            if (region is null || RegionShowPercentField.GetValue(region) is not bool showPercent || !showPercent)
+            {
+                continue;
+            }
+
+            if (RegionStartField.GetValue(region) is not float candidateStart ||
+                RegionEndField.GetValue(region) is not float candidateEnd)
+            {
+                continue;
+            }
+            if (candidateEnd > candidateStart &&
+                dryRangeProbe >= candidateStart && dryRangeProbe <= candidateEnd)
+            {
+                start = candidateStart;
+                end = candidateEnd;
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

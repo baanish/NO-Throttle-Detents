@@ -1,34 +1,46 @@
 using System;
+using System.Globalization;
 
 namespace NuclearOptionDetents.Core;
 
 /// <summary>One boundary's HUD row: whether to draw it, its lock state, and release-hold progress in 0..1.</summary>
 public readonly struct DetentIndicatorLine
 {
-    internal DetentIndicatorLine(bool visible, EndpointDetentState state, double progress)
+    internal DetentIndicatorLine(
+        bool visible,
+        EndpointDetentState state,
+        double progress,
+        double boundaryPercent = 0)
     {
         Visible = visible;
         State = state;
         Progress = progress;
+        BoundaryPercent = boundaryPercent;
     }
 
     public bool Visible { get; }
     public EndpointDetentState State { get; }
     public double Progress { get; }
+    public double BoundaryPercent { get; }
 }
 
-/// <summary>What the HUD should show this frame for both boundaries.</summary>
+/// <summary>What the HUD should show this frame for endpoint or custom detents.</summary>
 public readonly struct DetentIndicatorSnapshot
 {
-    internal DetentIndicatorSnapshot(DetentIndicatorLine idle, DetentIndicatorLine afterburner)
+    internal DetentIndicatorSnapshot(
+        DetentIndicatorLine idle,
+        DetentIndicatorLine afterburner,
+        DetentIndicatorLine interior = default)
     {
         Idle = idle;
         Afterburner = afterburner;
+        Interior = interior;
     }
 
     public DetentIndicatorLine Idle { get; }
     public DetentIndicatorLine Afterburner { get; }
-    public bool Visible => Idle.Visible || Afterburner.Visible;
+    public DetentIndicatorLine Interior { get; }
+    public bool Visible => Idle.Visible || Afterburner.Visible || Interior.Visible;
 
     public static DetentIndicatorSnapshot Hidden => new(default, default);
 }
@@ -77,6 +89,26 @@ public static class DetentIndicatorPolicy
                 Progress(runtime.AfterburnerElapsedSeconds, afterburnerHoldMilliseconds)));
     }
 
+    internal static DetentIndicatorSnapshot EvaluateInterior(
+        in InteriorDetentSnapshot runtime,
+        double holdMilliseconds,
+        bool enabled)
+    {
+        if (!enabled || !runtime.IsHeld)
+        {
+            return DetentIndicatorSnapshot.Hidden;
+        }
+
+        return new DetentIndicatorSnapshot(
+            default,
+            default,
+            new DetentIndicatorLine(
+                visible: true,
+                runtime.State,
+                Progress(runtime.ElapsedHoldSeconds, holdMilliseconds),
+                runtime.DryPercent));
+    }
+
     /// <summary>Elapsed fraction of the configured release hold; a zero-length hold reports no progress rather than a full bar.</summary>
     private static double Progress(double elapsedSeconds, double holdMilliseconds)
     {
@@ -101,8 +133,15 @@ public static class DetentIndicatorText
             return FormatLine("IDLE", snapshot.Idle);
         }
 
-        return snapshot.Afterburner.Visible
-            ? FormatLine("AB", snapshot.Afterburner)
+        if (snapshot.Afterburner.Visible)
+        {
+            return FormatLine("AB", snapshot.Afterburner);
+        }
+
+        return snapshot.Interior.Visible
+            ? FormatLine(
+                snapshot.Interior.BoundaryPercent.ToString("0.##", CultureInfo.InvariantCulture) + "%",
+                snapshot.Interior)
             : string.Empty;
     }
 

@@ -74,10 +74,22 @@ internal static class RuntimeCompatibility
         id = string.Empty;
         displayName = string.Empty;
         var definitionField = AircraftDefinition;
+        if (definitionField is null ||
+            definitionField.GetValue(aircraft) is not UnitDefinition definition)
+        {
+            return false;
+        }
+
+        return TryGetDefinitionIdentity(definition, out id, out displayName);
+    }
+
+    public static bool TryGetDefinitionIdentity(UnitDefinition definition, out string id, out string displayName)
+    {
+        id = string.Empty;
+        displayName = string.Empty;
         var jsonKeyField = UnitDefinitionJsonKey;
         var nameField = UnitDefinitionName;
-        if (definitionField is null || jsonKeyField is null || nameField is null ||
-            definitionField.GetValue(aircraft) is not UnitDefinition definition)
+        if (jsonKeyField is null || nameField is null)
         {
             return false;
         }

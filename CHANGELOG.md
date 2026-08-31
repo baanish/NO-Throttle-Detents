@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0
+
+- Adds explicit presets for Aryx's MC-260 Chimera, F-16M King Viper, F-99 Shrike, FS-41 Eclipse, and OA-27 Cavalier, plus the FS-3 Ternion.
+- Pins each add-on aircraft's serialized `jsonKey`, airbrake path, afterburner range, and nozzle count. Unexpected or missing runtime components still leave that capability vanilla.
+- Adds an Aircraft Profile selector populated from the installed aircraft catalog, with seat entry as a fallback. Every aircraft keeps independent custom settings, while the runtime always selects by the local aircraft ID.
+- Keeps the expanded aircraft selector to eight visible rows with a scrollbar for larger installed-aircraft catalogs.
+- Adds Reset Profile to restore only the selected aircraft's custom settings.
+- Adds up to eight custom interior detents per aircraft profile. Positions use idle-to-MIL percentages, work in both directions, share that profile's hold time, and appear on the flight HUD.
+- Keeps the add-on mods optional: Nuclear Option Detents has no Blueprinter or aircraft-mod assembly dependency.
+- Live checks on Nuclear Option 0.34.2, Steam build 24724372, loaded all six add-on aircraft and confirmed the expected components without a Detents exception. The OA-27 held a custom 67% detent, and an MC-260 ground roll confirmed its separate Brake-plus-throttle reverser still works.
+
 ## 0.3.0
 
 - Moves detent enforcement to the local pilot's throttle path and removes the per-aircraft airbrake, control-surface, and nozzle patches.

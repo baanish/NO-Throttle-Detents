@@ -20,6 +20,13 @@ internal static class RuntimeController
     private static ModConfig? _config;
     private static ManualLogSource? _log;
     private static DetentRuntime _runtime = new();
+    private static InteriorDetentRuntime _interiorDetents = new(
+        Array.Empty<double>(),
+        displayStart: 0,
+        displayEnd: 1,
+        holdMilliseconds: 200,
+        crossingEpsilon: 0.001,
+        resetHysteresis: 0.02);
     private static readonly List<JetNozzle> AfterburnerCandidates = new();
     private static readonly List<AfterburnerNozzleSample> AfterburnerSamples = new();
     private static EffectiveSettings _settings;
@@ -32,6 +39,10 @@ internal static class RuntimeController
     private static ControlInputs? _localInputs;
     private static bool _localCollective;
     private static AirframePreset? _activePreset;
+    private static double[] _customDryDetentFractions = Array.Empty<double>();
+    private static bool _customDisplayRangeKnown;
+    private static double _customDisplayStart;
+    private static double _customDisplayEnd = 1;
     private static string _airframeId = string.Empty;
     private static string _airframeName = string.Empty;
     private static bool _aircraftCapabilitiesKnown;
@@ -82,12 +93,14 @@ internal static class RuntimeController
                     _idleGateActive,
                     _afterburnerGateActive,
                     hasPlayerAircraft,
-                    _activePreset is not null,
+                    _activePreset is not null || _customDryDetentFractions.Length > 0,
                     _localCollective,
                     PlayerSettings.throttleUseRelative,
                     _aircraftCapabilitiesKnown,
                     _hasAirbrake,
-                    _hasAfterburner));
+                    _hasAfterburner,
+                    CustomDetentsApply(),
+                    _customDryDetentFractions.Length > 0));
             }
             catch
             {
@@ -100,13 +113,63 @@ internal static class RuntimeController
 
     public static string CurrentAircraftDisplayName =>
         string.IsNullOrWhiteSpace(_airframeName) ? "No aircraft" : _airframeName;
+    public static string CurrentAircraftId => _airframeId;
 
     /// <summary>Last evaluated HUD state; hidden whenever the runtime resets, so a stale line cannot survive an aircraft or scene change.</summary>
     public static DetentIndicatorSnapshot IndicatorSnapshot => _indicator;
     internal static Aircraft? LocalAircraft => _localAircraft;
+    internal static bool HasCustomThrottleDisplayRange(Aircraft aircraft) =>
+        ReferenceEquals(_localAircraft, aircraft) && _customDisplayRangeKnown;
     internal static DetentRuntimeSnapshot DetentSnapshot => _runtime.Snapshot;
     internal static bool HasEffectiveSimulatedThrottle => _hasEffectiveSimulatedThrottle;
     internal static double EffectiveSimulatedThrottle => _effectiveSimulatedThrottle;
+
+    /// <summary>Updates custom detents from the local cockpit gauge's percentage range.</summary>
+    internal static void SetCustomThrottleDisplayRange(Aircraft aircraft, double start, double end)
+    {
+        if (!ReferenceEquals(_localAircraft, aircraft) ||
+            double.IsNaN(start) || double.IsInfinity(start) ||
+            double.IsNaN(end) || double.IsInfinity(end) || end <= start)
+        {
+            return;
+        }
+
+        start = SimulatedThrottleMapping.ClampPublic(start);
+        end = SimulatedThrottleMapping.ClampPublic(end);
+        if (end <= start ||
+            _customDisplayRangeKnown &&
+            Math.Abs(start - _customDisplayStart) <= 0.000001 &&
+            Math.Abs(end - _customDisplayEnd) <= 0.000001)
+        {
+            return;
+        }
+
+        _customDisplayRangeKnown = true;
+        _customDisplayStart = start;
+        _customDisplayEnd = end;
+        RebuildRuntime(ReadSettings());
+        RefreshApplicableCapabilities();
+        if (_settings.DebugLogging && _log is not null && _customDryDetentFractions.Length > 0)
+        {
+            _log.LogInfo(
+                $"Custom detent HUD range for {_airframeId}: " +
+                $"{_customDisplayStart:0.####}..{_customDisplayEnd:0.####}");
+        }
+    }
+
+    internal static void ClearCustomThrottleDisplayRange(Aircraft aircraft)
+    {
+        if (!ReferenceEquals(_localAircraft, aircraft) || !_customDisplayRangeKnown)
+        {
+            return;
+        }
+
+        _customDisplayRangeKnown = false;
+        _customDisplayStart = 0;
+        _customDisplayEnd = 1;
+        RebuildRuntime(ReadSettings());
+        RefreshApplicableCapabilities();
+    }
 
     /// <summary>Records which patches actually installed; a gate whose patch is missing never claims to be active.</summary>
     public static void SetPatchStatus(bool throttleObserverActive)
@@ -181,7 +244,14 @@ internal static class RuntimeController
                 _lastObservedFrame = -1;
                 _hasEffectiveSimulatedThrottle = false;
                 _indicator = DetentIndicatorSnapshot.Hidden;
-                ResolveAirframePreset(aircraft!);
+                _customDisplayRangeKnown = false;
+                _customDisplayStart = 0;
+                _customDisplayEnd = 1;
+                ResolveAirframeIdentity(aircraft!);
+                settings = ReadSettings();
+                _settings = settings;
+                _hasSettings = true;
+                ResolveAirframePreset();
                 ResetAircraftCapabilities();
                 DiscoverLocalCapabilities(aircraft!);
                 _nextCapabilityDiscoveryTime = simulationTime + CapabilityDiscoveryRetrySeconds;
@@ -193,7 +263,7 @@ internal static class RuntimeController
                     _log.LogInfo(
                         $"Detents attached to {_airframeName} ({_airframeId}): " +
                         $"allowlisted={_activePreset is not null}, airbrake={_hasAirbrake}, afterburner={_hasAfterburner}, " +
-                        $"throttleUseNegative={PlayerSettings.throttleUseNegative}");
+                        $"customDetents={_customDryDetentFractions.Length}, throttleUseNegative={PlayerSettings.throttleUseNegative}");
                 }
             }
 
@@ -251,8 +321,9 @@ internal static class RuntimeController
                                  !autoHoverEnabled && !foreignThrottleControl;
             var idleApplies = settings.IdleEnabled && _hasAirbrake;
             var afterburnerApplies = settings.AfterburnerEnabled && _hasAfterburner;
+            var customDetentsApply = CustomDetentsApply();
 
-            var hasLiveDetentCapability = _hasAirbrake || _hasAfterburner;
+            var hasLiveDetentCapability = _hasAirbrake || _hasAfterburner || customDetentsApply;
             var sensitivityEnabled = settings.ThrottleSensitivity != 1f &&
                                      RelativeThrottleSensitivity.ShouldApply(
                 settings.Enabled,
@@ -279,6 +350,28 @@ internal static class RuntimeController
                 inputs.throttle = requestedThrottle;
             }
 
+            var interiorHold = _interiorDetents.Update(new InteriorDetentInput(
+                simulationTime,
+                requestedThrottle,
+                effectiveSimulatedThrottle,
+                command,
+                simulatedThrottleRange,
+                enabled: settings.Enabled && detentsAllowed && customDetentsApply,
+                relativeThrottleMode: relativeThrottle,
+                controlsEnabled,
+                paused,
+                axisModifierHeld));
+            if (interiorHold.IsHeld)
+            {
+                requestedThrottle = (float)interiorHold.EffectiveThrottle;
+                inputs.throttle = requestedThrottle;
+            }
+            if (interiorHold.ShouldPinSimulatedThrottle)
+            {
+                effectiveSimulatedThrottle = interiorHold.SimulatedThrottle;
+                simulatedThrottleAccessor(state) = (float)effectiveSimulatedThrottle;
+            }
+
             var snapshot = _runtime.Update(new DetentRuntimeInput(
                 simulationTime,
                 requestedThrottle,
@@ -289,7 +382,8 @@ internal static class RuntimeController
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
-                relativeThrottle));
+                relativeThrottle,
+                suspendState: interiorHold.IsHeld));
             var boundaryHold = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
                 requestedThrottle,
                 effectiveSimulatedThrottle,
@@ -299,7 +393,7 @@ internal static class RuntimeController
                 _runtime.IdleDetent.Boundary,
                 _runtime.AfterburnerDetent.Boundary,
                 settings.EndpointEpsilon,
-                settings.Enabled && detentsAllowed,
+                settings.Enabled && detentsAllowed && !interiorHold.IsHeld,
                 relativeThrottle,
                 simulatedThrottleRange,
                 controlsEnabled,
@@ -331,6 +425,13 @@ internal static class RuntimeController
                 boundaryHold.IsHeld,
                 idleApplies,
                 afterburnerApplies);
+            if (interiorHold.IsHeld)
+            {
+                _indicator = DetentIndicatorPolicy.EvaluateInterior(
+                    interiorHold,
+                    settings.CustomAirframe.DryDetentHoldMilliseconds,
+                    settings.IndicatorEnabled);
+            }
             _lastObservedFrame = frame;
         }
         catch (Exception exception)
@@ -355,6 +456,7 @@ internal static class RuntimeController
         if (controlsInterrupted)
         {
             _runtime.CancelPendingHolds();
+            _interiorDetents.CancelPendingHold();
             _indicator = DetentIndicatorSnapshot.Hidden;
         }
     }
@@ -374,11 +476,16 @@ internal static class RuntimeController
         var shouldLog = !ReferenceEquals(_localState, null) &&
                         _hasSettings && _settings.DebugLogging && _log is not null;
         _runtime.ResetLifecycle();
+        _interiorDetents.ResetLifecycle();
         _localState = null;
         _localAircraft = null;
         _localInputs = null;
         _localCollective = false;
         _activePreset = null;
+        _customDryDetentFractions = Array.Empty<double>();
+        _customDisplayRangeKnown = false;
+        _customDisplayStart = 0;
+        _customDisplayEnd = 1;
         _airframeId = string.Empty;
         _airframeName = string.Empty;
         _aircraftCapabilitiesKnown = false;
@@ -415,7 +522,7 @@ internal static class RuntimeController
             throw new InvalidOperationException("Runtime controller is not initialized.");
         }
 
-        return _config.ReadEffective();
+        return _config.ReadEffective(_airframeId);
     }
 
     private static void EnsureSettings(EffectiveSettings settings)
@@ -425,13 +532,28 @@ internal static class RuntimeController
             return;
         }
 
+        var customAirframeChanged = !_hasSettings ||
+                                    !_settings.CustomAirframe.Equals(settings.CustomAirframe);
         var timingChanged = !_hasSettings ||
                             _settings.IdleHoldMilliseconds != settings.IdleHoldMilliseconds ||
                             _settings.AfterburnerHoldMilliseconds != settings.AfterburnerHoldMilliseconds ||
                             !_settings.EndpointEpsilon.Equals(settings.EndpointEpsilon) ||
                             !_settings.ResetHysteresis.Equals(settings.ResetHysteresis);
+        var interiorTimingChanged = !_hasSettings ||
+                                    !_settings.EndpointEpsilon.Equals(settings.EndpointEpsilon) ||
+                                    !_settings.ResetHysteresis.Equals(settings.ResetHysteresis);
         _settings = settings;
         _hasSettings = true;
+        if (customAirframeChanged && !ReferenceEquals(_localAircraft, null))
+        {
+            ResolveAirframePreset();
+            ResetAircraftCapabilities();
+            _nextCapabilityDiscoveryTime = Time.time + CapabilityDiscoveryRetrySeconds;
+            RefreshApplicableCapabilities();
+            RebuildRuntime(settings);
+            return;
+        }
+
         if (timingChanged)
         {
             _runtime.Reconfigure(
@@ -439,6 +561,11 @@ internal static class RuntimeController
                 settings.AfterburnerHoldMilliseconds,
                 settings.EndpointEpsilon,
                 settings.ResetHysteresis);
+        }
+
+        if (interiorTimingChanged)
+        {
+            _interiorDetents.Reconfigure(settings.EndpointEpsilon, settings.ResetHysteresis);
         }
 
         RefreshApplicableCapabilities();
@@ -458,6 +585,13 @@ internal static class RuntimeController
             settings.ResetHysteresis,
             idleBoundary,
             afterburnerBoundary);
+        _interiorDetents = new InteriorDetentRuntime(
+            _customDisplayRangeKnown ? _customDryDetentFractions : Array.Empty<double>(),
+            _customDisplayStart,
+            _customDisplayEnd,
+            settings.CustomAirframe.DryDetentHoldMilliseconds,
+            settings.EndpointEpsilon,
+            settings.ResetHysteresis);
         _lastObservedFrame = -1;
         _indicator = DetentIndicatorSnapshot.Hidden;
         _hasEffectiveSimulatedThrottle = false;
@@ -467,9 +601,8 @@ internal static class RuntimeController
         }
     }
 
-    private static void ResolveAirframePreset(Aircraft aircraft)
+    private static void ResolveAirframeIdentity(Aircraft aircraft)
     {
-        _activePreset = null;
         _airframeId = string.Empty;
         _airframeName = string.Empty;
         if (!RuntimeCompatibility.TryGetAirframeIdentity(aircraft, out _airframeId, out _airframeName))
@@ -477,12 +610,29 @@ internal static class RuntimeController
             return;
         }
 
-        AirframePresetCatalog.TryGet(_airframeId, out _activePreset!);
+        _config?.RegisterDetectedAircraft(_airframeId, _airframeName);
+    }
+
+    private static void ResolveAirframePreset()
+    {
+        _activePreset = null;
+        AirframePresetCatalog.TryGet(_airframeId, _settings.CustomAirframe, out _activePreset!);
+        _customDryDetentFractions = Array.Empty<double>();
+        if (_settings.CustomAirframe.Matches(_airframeId) &&
+            _settings.CustomAirframe.TryGetDryDetentFractions(out var fractions))
+        {
+            _customDryDetentFractions = fractions;
+        }
     }
 
     /// <summary>Preset-level eligibility only; live component confirmation is tracked separately in the capability flags.</summary>
     private static bool AirframeAllowsDetents() =>
-        AirframePresetCatalog.SupportsDetents(_activePreset, _localCollective);
+        !_localCollective &&
+        (AirframePresetCatalog.SupportsDetents(_activePreset, runtimeCollective: false) ||
+         CustomDetentsApply());
+
+    private static bool CustomDetentsApply() =>
+        _customDisplayRangeKnown && _customDryDetentFractions.Length > 0;
 
     private static void RefreshApplicableCapabilities()
     {
@@ -509,14 +659,17 @@ internal static class RuntimeController
             _afterburnerRangeMatchesPreset);
         _idleGateActive = _throttleObserverActive && _hasAirbrake;
         _afterburnerGateActive = _throttleObserverActive && _hasAfterburner;
-        _aircraftCapabilitiesKnown = _hasSettings && RuntimeReadinessPolicy.AreEnabledCapabilitiesKnown(
-            _activePreset is not null,
-            _settings.IdleEnabled,
-            _settings.AfterburnerEnabled,
-            _activePreset?.HasAirbrake == true,
-            _activePreset?.HasAfterburner == true,
-            airbrakeConfirmed,
-            _afterburnerRangeMatchesPreset);
+        _aircraftCapabilitiesKnown = _hasSettings &&
+            (_activePreset is null
+                ? CustomDetentsApply()
+                : RuntimeReadinessPolicy.AreEnabledCapabilitiesKnown(
+                    hasPreset: true,
+                    _settings.IdleEnabled,
+                    _settings.AfterburnerEnabled,
+                    _activePreset.HasAirbrake,
+                    _activePreset.HasAfterburner,
+                    airbrakeConfirmed,
+                    _afterburnerRangeMatchesPreset));
     }
 
     private static void ResetAircraftCapabilities()

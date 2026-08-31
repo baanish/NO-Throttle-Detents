@@ -28,16 +28,20 @@ internal readonly struct RuntimeReadinessInput
         bool relativeThrottleMode,
         bool aircraftCapabilitiesKnown,
         bool hasAirbrake,
-        bool hasAfterburner)
+        bool hasAfterburner,
+        bool interiorDetentsEnabled = false,
+        bool interiorDetentsConfigured = false)
     {
         (MasterEnabled, IdleEnabled, AfterburnerEnabled, PatchStatusKnown,
             ThrottleObserverActive, IdleGateActive, AfterburnerGateActive,
             HasPlayerAircraft, AirframeSupported, IsCollective, RelativeThrottleMode,
-            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner) =
+            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled,
+            InteriorDetentsConfigured) =
             (masterEnabled, idleEnabled, afterburnerEnabled, patchStatusKnown,
                 throttleObserverActive, idleGateActive, afterburnerGateActive,
                 hasPlayerAircraft, airframeSupported, isCollective, relativeThrottleMode,
-                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner);
+                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled,
+                interiorDetentsConfigured);
     }
 
     public bool MasterEnabled { get; }
@@ -54,6 +58,8 @@ internal readonly struct RuntimeReadinessInput
     public bool AircraftCapabilitiesKnown { get; }
     public bool HasAirbrake { get; }
     public bool HasAfterburner { get; }
+    public bool InteriorDetentsEnabled { get; }
+    public bool InteriorDetentsConfigured { get; }
 }
 
 internal readonly struct RuntimeReadinessResult
@@ -88,7 +94,7 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.Off, "OFF - Mod disabled");
         }
 
-        if (!input.IdleEnabled && !input.AfterburnerEnabled)
+        if (!input.IdleEnabled && !input.AfterburnerEnabled && !input.InteriorDetentsConfigured)
         {
             return Result(RuntimeReadinessState.Off, "OFF - Both detents disabled");
         }
@@ -123,14 +129,19 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Relative throttle only");
         }
 
-        if (!input.AircraftCapabilitiesKnown)
+        if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)
+        {
+            return Result(RuntimeReadinessState.Caution, "CAUTION - Custom detent range unavailable");
+        }
+
+        if (!input.AircraftCapabilitiesKnown && !input.InteriorDetentsEnabled)
         {
             return Result(RuntimeReadinessState.Caution, "CAUTION - Systems not confirmed");
         }
 
         var idleApplies = input.IdleEnabled && input.HasAirbrake;
         var afterburnerApplies = input.AfterburnerEnabled && input.HasAfterburner;
-        if (!idleApplies && !afterburnerApplies)
+        if (!idleApplies && !afterburnerApplies && !input.InteriorDetentsEnabled)
         {
             if (!input.HasAirbrake && !input.HasAfterburner)
             {
@@ -161,14 +172,33 @@ internal static class RuntimeReadinessPolicy
             return Result(state, $"{prefix} - Afterburner detent unavailable");
         }
 
+        if (input.InteriorDetentsEnabled)
+        {
+            if (idleApplies && afterburnerApplies)
+            {
+                return Result(
+                    RuntimeReadinessState.Likely,
+                    "Detected airbrake and afterburner | Custom detents enabled");
+            }
+
+            if (idleApplies)
+            {
+                return Result(RuntimeReadinessState.Likely, "Detected airbrake | Custom detents enabled");
+            }
+
+            return afterburnerApplies
+                ? Result(RuntimeReadinessState.Likely, "Detected afterburner | Custom detents enabled")
+                : Result(RuntimeReadinessState.Likely, "Custom detents enabled");
+        }
+
         if (idleApplies && afterburnerApplies)
         {
-            return Result(RuntimeReadinessState.Likely, "LIKELY - Airbrake and afterburner");
+            return Result(RuntimeReadinessState.Likely, "Detected airbrake and afterburner");
         }
 
         return idleApplies
-            ? Result(RuntimeReadinessState.Likely, "LIKELY - Airbrake detent")
-            : Result(RuntimeReadinessState.Likely, "LIKELY - Afterburner detent");
+            ? Result(RuntimeReadinessState.Likely, "Detected airbrake")
+            : Result(RuntimeReadinessState.Likely, "Detected afterburner");
     }
 
     private static RuntimeReadinessResult Result(RuntimeReadinessState state, string displayText) =>

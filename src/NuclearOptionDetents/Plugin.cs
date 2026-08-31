@@ -14,9 +14,10 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.baanish.nuclearoption.detents";
     public const string PluginName = "Nuclear Option Detents";
-    public const string PluginVersion = "0.3.0";
+    public const string PluginVersion = "0.4.0";
 
     private PatchInstaller? _patchInstaller;
+    private ModConfig? _modConfig;
     private DetentHudIndicator? _hudIndicator;
     private NetworkValidationObserver? _networkValidation;
     private bool _hudFailureLogged;
@@ -24,9 +25,9 @@ public sealed class Plugin : BaseUnityPlugin
     /// <summary>Config, patches, and HUD are installed independently: a HUD failure logs once and leaves the detents running.</summary>
     private void Awake()
     {
-        var modConfig = new ModConfig(Config);
-        RuntimeController.Initialize(modConfig, Logger);
-        _networkValidation = new NetworkValidationObserver(modConfig, Logger);
+        _modConfig = new ModConfig(Config);
+        RuntimeController.Initialize(_modConfig, Logger);
+        _networkValidation = new NetworkValidationObserver(_modConfig, Logger);
         _patchInstaller = new PatchInstaller(Logger);
         _patchInstaller.Install();
         try
@@ -46,6 +47,8 @@ public sealed class Plugin : BaseUnityPlugin
             $"{PluginName} {PluginVersion} loaded. " +
             $"Throttle={_patchInstaller.ThrottleObserver}.");
     }
+
+    private void Start() => _modConfig?.RefreshInstalledAircraft();
 
     /// <summary>
     /// Kept out of <see cref="Awake"/> and un-inlined so a missing TextMeshPro or HUD type fails when this
@@ -76,6 +79,7 @@ public sealed class Plugin : BaseUnityPlugin
         _networkValidation?.Update();
         try
         {
+            _hudIndicator?.SyncThrottleDisplayRange();
             _hudIndicator?.Render(RuntimeController.IndicatorSnapshot);
         }
         catch (System.Exception exception)
