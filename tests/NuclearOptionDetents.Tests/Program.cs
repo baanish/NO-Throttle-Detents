@@ -985,7 +985,7 @@ internal static class Program
     {
         var result = Readiness(relativeThrottleMode: false);
         Equal(RuntimeReadinessState.NotApplicable, result.State);
-        Equal("NOT APPLICABLE - Relative throttle only", result.DisplayText);
+        Equal("NOT APPLICABLE - Enable Use Throttle Relative Axis", result.DisplayText);
     }
 
     private static void ReadinessWaitsForPatchInstallation()

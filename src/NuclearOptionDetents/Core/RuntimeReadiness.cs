@@ -126,7 +126,7 @@ internal static class RuntimeReadinessPolicy
 
         if (!input.RelativeThrottleMode)
         {
-            return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Relative throttle only");
+            return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Enable Use Throttle Relative Axis");
         }
 
         if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)
