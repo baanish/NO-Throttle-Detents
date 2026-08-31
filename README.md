@@ -135,12 +135,13 @@ multiplayer diagnostic; keep it off during normal play. See
 [docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md) for the two-client
 check and log analyzer.
 
-The Aircraft Profile selector lists aircraft in the game's installed-aircraft
-catalog. Entering an aircraft also adds its exact `jsonKey` as a fallback. Each
-aircraft keeps an independent profile. Selecting a profile changes only which
-profile the menu edits. The runtime always uses the profile matching the local
-aircraft. Reset Profile restores only that profile. Choose the airbrake
-type and, when applicable, enter the live afterburner nozzle count and range.
+The scrollable Aircraft Profile selector lists aircraft in the game's
+installed-aircraft catalog. Entering an aircraft also adds its exact `jsonKey`
+as a fallback. Each aircraft keeps an independent profile. Selecting a profile
+changes only which profile the menu edits. The runtime always uses the profile
+matching the local aircraft. Reset Profile restores only that profile. Choose
+the airbrake type and, when applicable, enter the live afterburner nozzle count
+and range.
 Those components must still match before an endpoint detent can run.
 
 ![Aircraft Profile selector showing installed aircraft and custom settings](docs/screenshots/config-aircraft-profiles.png)

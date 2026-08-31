@@ -13,6 +13,8 @@ internal sealed class CustomAircraftProfiles
 {
     private const string EditorSection = "Custom Aircraft";
     private const string ProfileSectionPrefix = "Custom Aircraft Profile ";
+    private const float SelectorRowHeight = 22f;
+    private const float SelectorHeight = 8 * (SelectorRowHeight + 2f);
     private readonly ConfigFile _config;
     private readonly ConfigEntry<string> _detectedAircraft;
     private readonly ConfigEntry<string> _selectedAircraft;
@@ -21,6 +23,7 @@ internal sealed class CustomAircraftProfiles
     private readonly Dictionary<string, string> _editBuffers = new(StringComparer.Ordinal);
     private readonly DetectedAircraftCatalog _catalog;
     private bool _selectorOpen;
+    private Vector2 _selectorScroll;
 
     public CustomAircraftProfiles(ConfigFile config)
     {
@@ -148,6 +151,7 @@ internal sealed class CustomAircraftProfiles
             _selectorOpen = !_selectorOpen;
             if (_selectorOpen)
             {
+                _selectorScroll = Vector2.zero;
                 RefreshInstalledAircraft();
                 identities = _catalog.All;
             }
@@ -155,18 +159,29 @@ internal sealed class CustomAircraftProfiles
 
         if (_selectorOpen)
         {
+            GUILayout.BeginVertical(GUI.skin.box);
+            _selectorScroll = GUILayout.BeginScrollView(
+                _selectorScroll,
+                false,
+                true,
+                GUILayout.Height(SelectorHeight));
             foreach (var identity in identities)
             {
                 var suffix = string.Equals(identity.Id, RuntimeController.CurrentAircraftId, StringComparison.OrdinalIgnoreCase)
                     ? "  [CURRENT]"
                     : string.Empty;
-                if (GUILayout.Button($"{identity.DisplayName} ({identity.Id}){suffix}", GUILayout.ExpandWidth(true)))
+                if (GUILayout.Button(
+                        $"{identity.DisplayName} ({identity.Id}){suffix}",
+                        GUILayout.ExpandWidth(true),
+                        GUILayout.Height(SelectorRowHeight)))
                 {
                     _selectedAircraft.Value = identity.Id;
                     _selectorOpen = false;
                     selectedId = identity.Id;
                 }
             }
+            GUILayout.EndScrollView();
+            GUILayout.EndVertical();
         }
 
         if (_profiles.TryGetValue(selectedId, out var profile))
