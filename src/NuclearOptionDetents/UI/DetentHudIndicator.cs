@@ -14,6 +14,7 @@ namespace NuclearOptionDetents.UI;
 /// </summary>
 internal sealed class DetentHudIndicator
 {
+    private const float DisplayRangeRetrySeconds = 0.25f;
     private static readonly FieldInfo? ThrottleLabelField =
         AccessTools.DeclaredField(typeof(ThrottleGauge), "throttleLabel");
     private static readonly FieldInfo? ThrottleRegionsField =
@@ -29,6 +30,7 @@ internal sealed class DetentHudIndicator
     private FlightHud? _hud;
     private Aircraft? _displayAircraft;
     private ThrottleGauge? _displayGauge;
+    private float _nextDisplayRangeProbeTime;
     private Transform? _hudCenter;
     private TextMeshProUGUI? _sourceLabel;
     private GameObject? _indicatorObject;
@@ -68,21 +70,33 @@ internal sealed class DetentHudIndicator
             return;
         }
 
-        var gauge = hud!.GetComponentInChildren<ThrottleGauge>(true);
-        if (!IsAlive(gauge) ||
-            ReferenceEquals(_displayAircraft, aircraft) && ReferenceEquals(_displayGauge, gauge))
+        var cachedPair = ReferenceEquals(_displayAircraft, aircraft) && IsAlive(_displayGauge);
+        if (cachedPair && RuntimeController.HasCustomThrottleDisplayRange(aircraft!))
+        {
+            return;
+        }
+        if (cachedPair && Time.unscaledTime < _nextDisplayRangeProbeTime)
         {
             return;
         }
 
+        var gauge = hud!.GetComponentInChildren<ThrottleGauge>(true);
+        if (!IsAlive(gauge))
+        {
+            _nextDisplayRangeProbeTime = Time.unscaledTime + DisplayRangeRetrySeconds;
+            return;
+        }
+
+        _displayAircraft = aircraft;
+        _displayGauge = gauge;
         if (TryGetDryDisplayRange(gauge!, out var start, out var end))
         {
-            _displayAircraft = aircraft;
-            _displayGauge = gauge;
+            _nextDisplayRangeProbeTime = 0f;
             RuntimeController.SetCustomThrottleDisplayRange(aircraft!, start, end);
             return;
         }
 
+        _nextDisplayRangeProbeTime = Time.unscaledTime + DisplayRangeRetrySeconds;
         RuntimeController.ClearCustomThrottleDisplayRange(aircraft!);
     }
 
@@ -143,6 +157,7 @@ internal sealed class DetentHudIndicator
         _hud = null;
         _displayAircraft = null;
         _displayGauge = null;
+        _nextDisplayRangeProbeTime = 0f;
         _hudCenter = null;
         _sourceLabel = null;
         _indicatorObject = null;

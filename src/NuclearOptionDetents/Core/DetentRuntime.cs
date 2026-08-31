@@ -15,12 +15,13 @@ public readonly struct DetentRuntimeInput
         bool controlsEnabled = true,
         bool paused = false,
         bool axisModifierHeld = false,
-        bool relativeThrottleMode = true)
+        bool relativeThrottleMode = true,
+        bool suspendState = false)
     {
         (SimulationTime, Throttle, Command, MasterEnabled, IdleEnabled,
-            AfterburnerEnabled, ControlsEnabled, Paused, AxisModifierHeld, RelativeThrottleMode) =
+            AfterburnerEnabled, ControlsEnabled, Paused, AxisModifierHeld, RelativeThrottleMode, SuspendState) =
             (simulationTime, throttle, command, masterEnabled, idleEnabled,
-                afterburnerEnabled, controlsEnabled, paused, axisModifierHeld, relativeThrottleMode);
+                afterburnerEnabled, controlsEnabled, paused, axisModifierHeld, relativeThrottleMode, suspendState);
     }
 
     public double SimulationTime { get; }
@@ -33,6 +34,7 @@ public readonly struct DetentRuntimeInput
     public bool Paused { get; }
     public bool AxisModifierHeld { get; }
     public bool RelativeThrottleMode { get; }
+    public bool SuspendState { get; }
 }
 
 /// <summary>Read-only result of one coordinated detent update.</summary>
@@ -139,6 +141,15 @@ public sealed class DetentRuntime
             IdleDetent.Update(new EndpointDetentInput(input.SimulationTime, input.Throttle, input.Command, enabled: false));
             AfterburnerDetent.Update(new EndpointDetentInput(input.SimulationTime, input.Throttle, input.Command, enabled: false));
             _snapshot = CreateSnapshot(bypassed: true, airbrakeInhibited: false, afterburnerUnlocked: true);
+            return _snapshot;
+        }
+
+        if (input.SuspendState)
+        {
+            _snapshot = CreateSnapshot(
+                bypassed: false,
+                airbrakeInhibited: false,
+                afterburnerUnlocked: true);
             return _snapshot;
         }
 

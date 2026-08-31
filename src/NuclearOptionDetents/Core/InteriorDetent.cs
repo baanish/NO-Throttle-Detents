@@ -136,8 +136,12 @@ internal sealed class InteriorDetentRuntime
         {
             if (!ThrottleCommands.IsDirection(input.Command, _activeDirection))
             {
+                var cancelledIndex = _activeIndex;
+                var cancelledDirection = _activeDirection;
                 CancelHold();
-                Remember(requested);
+                Remember(input.Command == ThrottleCommand.Neutral
+                    ? ThrottleOnApproachSide(cancelledIndex, cancelledDirection)
+                    : requested);
                 return PassThrough(input, requested);
             }
 
@@ -267,6 +271,15 @@ internal sealed class InteriorDetentRuntime
             parked,
             SimulatedThrottleMapping.ToSimulated(parked, input.ThrottleRange),
             shouldPinSimulatedThrottle: true);
+    }
+
+    private double ThrottleOnApproachSide(int index, DetentDirection direction)
+    {
+        var crossingBand = _crossingEpsilon + ThrottleBoundaryHold.InwardOffset;
+        return SimulatedThrottleMapping.ClampPublic(
+            direction == DetentDirection.Upper
+                ? _boundaries[index] - crossingBand
+                : _boundaries[index] + crossingBand);
     }
 
     private static InteriorDetentSnapshot PassThrough(in InteriorDetentInput input, double requested) =>

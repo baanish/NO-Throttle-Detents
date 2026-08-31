@@ -29,16 +29,19 @@ internal readonly struct RuntimeReadinessInput
         bool aircraftCapabilitiesKnown,
         bool hasAirbrake,
         bool hasAfterburner,
-        bool interiorDetentsEnabled = false)
+        bool interiorDetentsEnabled = false,
+        bool interiorDetentsConfigured = false)
     {
         (MasterEnabled, IdleEnabled, AfterburnerEnabled, PatchStatusKnown,
             ThrottleObserverActive, IdleGateActive, AfterburnerGateActive,
             HasPlayerAircraft, AirframeSupported, IsCollective, RelativeThrottleMode,
-            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled) =
+            AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled,
+            InteriorDetentsConfigured) =
             (masterEnabled, idleEnabled, afterburnerEnabled, patchStatusKnown,
                 throttleObserverActive, idleGateActive, afterburnerGateActive,
                 hasPlayerAircraft, airframeSupported, isCollective, relativeThrottleMode,
-                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled);
+                aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled,
+                interiorDetentsConfigured);
     }
 
     public bool MasterEnabled { get; }
@@ -56,6 +59,7 @@ internal readonly struct RuntimeReadinessInput
     public bool HasAirbrake { get; }
     public bool HasAfterburner { get; }
     public bool InteriorDetentsEnabled { get; }
+    public bool InteriorDetentsConfigured { get; }
 }
 
 internal readonly struct RuntimeReadinessResult
@@ -90,7 +94,7 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.Off, "OFF - Mod disabled");
         }
 
-        if (!input.IdleEnabled && !input.AfterburnerEnabled && !input.InteriorDetentsEnabled)
+        if (!input.IdleEnabled && !input.AfterburnerEnabled && !input.InteriorDetentsConfigured)
         {
             return Result(RuntimeReadinessState.Off, "OFF - Both detents disabled");
         }
@@ -123,6 +127,11 @@ internal static class RuntimeReadinessPolicy
         if (!input.RelativeThrottleMode)
         {
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Relative throttle only");
+        }
+
+        if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)
+        {
+            return Result(RuntimeReadinessState.Caution, "CAUTION - Custom detent range unavailable");
         }
 
         if (!input.AircraftCapabilitiesKnown && !input.InteriorDetentsEnabled)

@@ -93,13 +93,14 @@ internal static class RuntimeController
                     _idleGateActive,
                     _afterburnerGateActive,
                     hasPlayerAircraft,
-                    _activePreset is not null || CustomDetentsApply(),
+                    _activePreset is not null || _customDryDetentFractions.Length > 0,
                     _localCollective,
                     PlayerSettings.throttleUseRelative,
                     _aircraftCapabilitiesKnown,
                     _hasAirbrake,
                     _hasAfterburner,
-                    CustomDetentsApply()));
+                    CustomDetentsApply(),
+                    _customDryDetentFractions.Length > 0));
             }
             catch
             {
@@ -117,6 +118,8 @@ internal static class RuntimeController
     /// <summary>Last evaluated HUD state; hidden whenever the runtime resets, so a stale line cannot survive an aircraft or scene change.</summary>
     public static DetentIndicatorSnapshot IndicatorSnapshot => _indicator;
     internal static Aircraft? LocalAircraft => _localAircraft;
+    internal static bool HasCustomThrottleDisplayRange(Aircraft aircraft) =>
+        ReferenceEquals(_localAircraft, aircraft) && _customDisplayRangeKnown;
     internal static DetentRuntimeSnapshot DetentSnapshot => _runtime.Snapshot;
     internal static bool HasEffectiveSimulatedThrottle => _hasEffectiveSimulatedThrottle;
     internal static double EffectiveSimulatedThrottle => _effectiveSimulatedThrottle;
@@ -373,13 +376,14 @@ internal static class RuntimeController
                 simulationTime,
                 requestedThrottle,
                 command,
-                settings.Enabled && detentsAllowed && !interiorHold.IsHeld,
+                settings.Enabled && detentsAllowed,
                 idleApplies,
                 afterburnerApplies,
                 controlsEnabled,
                 paused,
                 axisModifierHeld,
-                relativeThrottle));
+                relativeThrottle,
+                suspendState: interiorHold.IsHeld));
             var boundaryHold = ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
                 requestedThrottle,
                 effectiveSimulatedThrottle,
@@ -544,7 +548,7 @@ internal static class RuntimeController
         {
             ResolveAirframePreset();
             ResetAircraftCapabilities();
-            DiscoverLocalCapabilities(_localAircraft!);
+            _nextCapabilityDiscoveryTime = Time.time + CapabilityDiscoveryRetrySeconds;
             RefreshApplicableCapabilities();
             RebuildRuntime(settings);
             return;

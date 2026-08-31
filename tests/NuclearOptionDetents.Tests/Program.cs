@@ -77,6 +77,7 @@ internal static class Program
             ("interior detent does not snap and catches the first crossing", InteriorDetentDoesNotSnapAndCatchesFirstCrossing),
             ("nearby interior detents unlock independently", NearbyInteriorDetentsUnlockIndependently),
             ("interior detent requires a continuous hold", InteriorDetentRequiresContinuousHold),
+            ("cancelled interior detent reverses freely", CancelledInteriorDetentReversesFreely),
             ("interior detent interruption clears crossing history", InteriorDetentInterruptionClearsCrossingHistory),
             ("interior detent reconfigure updates thresholds", InteriorDetentReconfigureUpdatesThresholds),
             ("interior detent precedes endpoint hold", InteriorDetentPrecedesEndpointHold),
@@ -1353,6 +1354,27 @@ internal static class Program
         Near(0, afterGap.ElapsedHoldSeconds);
     }
 
+    private static void CancelledInteriorDetentReversesFreely()
+    {
+        var upward = new InteriorDetentRuntime(new[] { 0.67 }, 0, 1, 200, 0.001, 0.02);
+        upward.Update(InteriorInput(0, 0.65, ThrottleCommand.Neutral));
+        var upperHold = upward.Update(InteriorInput(0.01, 0.69, ThrottleCommand.Increase));
+        True(upperHold.IsHeld);
+        False(upward.Update(InteriorInput(0.02, upperHold.EffectiveThrottle, ThrottleCommand.Neutral)).IsHeld);
+        var decreased = upward.Update(InteriorInput(0.03, 0.64, ThrottleCommand.Decrease));
+        False(decreased.IsHeld);
+        Near(0.64, decreased.EffectiveThrottle);
+
+        var downward = new InteriorDetentRuntime(new[] { 0.67 }, 0, 1, 200, 0.001, 0.02);
+        downward.Update(InteriorInput(0, 0.69, ThrottleCommand.Neutral));
+        var lowerHold = downward.Update(InteriorInput(0.01, 0.65, ThrottleCommand.Decrease));
+        True(lowerHold.IsHeld);
+        False(downward.Update(InteriorInput(0.02, lowerHold.EffectiveThrottle, ThrottleCommand.Neutral)).IsHeld);
+        var increased = downward.Update(InteriorInput(0.03, 0.70, ThrottleCommand.Increase));
+        False(increased.IsHeld);
+        Near(0.70, increased.EffectiveThrottle);
+    }
+
     private static void NearbyInteriorDetentsUnlockIndependently()
     {
         var runtime = new InteriorDetentRuntime(new[] { 0.67, 0.68 }, 0, 1, 10, 0.001, 0.02);
@@ -1418,9 +1440,9 @@ internal static class Program
             0.01,
             first.EffectiveThrottle,
             ThrottleCommand.Increase,
-            masterEnabled: !first.IsHeld,
-            idleEnabled: false));
-        Equal(EndpointDetentState.Unlocked, whileInteriorHeld.AfterburnerState);
+            idleEnabled: false,
+            suspendState: first.IsHeld));
+        Equal(EndpointDetentState.Locked, whileInteriorHeld.AfterburnerState);
 
         True(interior.Update(InteriorInput(0.11, 0.905, ThrottleCommand.Increase)).IsHeld);
         var released = interior.Update(InteriorInput(0.21, 0.905, ThrottleCommand.Increase));
@@ -1432,6 +1454,18 @@ internal static class Program
             masterEnabled: true,
             idleEnabled: false));
         Equal(EndpointDetentState.Holding, endpoint.AfterburnerState);
+
+        var unlockedEndpoints = new DetentRuntime(200, 200, 0.001, 0.02, 0, 0.9);
+        unlockedEndpoints.Update(new DetentRuntimeInput(0, 0.905, ThrottleCommand.Increase, idleEnabled: false));
+        unlockedEndpoints.Update(new DetentRuntimeInput(0.2, 0.905, ThrottleCommand.Increase, idleEnabled: false));
+        Equal(EndpointDetentState.Unlocked, unlockedEndpoints.Snapshot.AfterburnerState);
+        var suspended = unlockedEndpoints.Update(new DetentRuntimeInput(
+            0.3,
+            0.8995,
+            ThrottleCommand.Increase,
+            idleEnabled: false,
+            suspendState: true));
+        Equal(EndpointDetentState.Unlocked, suspended.AfterburnerState);
     }
 
     private static void CustomDetentReadinessAndHudAreExplicit()
@@ -1473,7 +1507,8 @@ internal static class Program
             aircraftCapabilitiesKnown: false,
             hasAirbrake: false,
             hasAfterburner: false,
-            interiorDetentsEnabled: true));
+            interiorDetentsEnabled: true,
+            interiorDetentsConfigured: true));
         Equal(RuntimeReadinessState.Likely, readiness.State);
         Equal("Custom detents enabled", readiness.DisplayText);
 
@@ -1492,9 +1527,30 @@ internal static class Program
             aircraftCapabilitiesKnown: true,
             hasAirbrake: true,
             hasAfterburner: false,
-            interiorDetentsEnabled: true));
+            interiorDetentsEnabled: true,
+            interiorDetentsConfigured: true));
         Equal(RuntimeReadinessState.Likely, combined.State);
         Equal("Detected airbrake | Custom detents enabled", combined.DisplayText);
+
+        var unavailable = RuntimeReadinessPolicy.Evaluate(new RuntimeReadinessInput(
+            masterEnabled: true,
+            idleEnabled: false,
+            afterburnerEnabled: false,
+            patchStatusKnown: true,
+            throttleObserverActive: true,
+            idleGateActive: false,
+            afterburnerGateActive: false,
+            hasPlayerAircraft: true,
+            airframeSupported: true,
+            isCollective: false,
+            relativeThrottleMode: true,
+            aircraftCapabilitiesKnown: false,
+            hasAirbrake: false,
+            hasAfterburner: false,
+            interiorDetentsEnabled: false,
+            interiorDetentsConfigured: true));
+        Equal(RuntimeReadinessState.Caution, unavailable.State);
+        Equal("CAUTION - Custom detent range unavailable", unavailable.DisplayText);
     }
 
     private static CustomAirframeConfig CustomAirframe(
