@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- Replaces the ambiguous absolute-throttle status with a direct instruction to enable `Use Throttle Relative Axis`.
+- Records `throttleUseRelative` when Detents attaches and whenever the setting changes during a flight.
+- A manual check on Nuclear Option 0.34.2 with the AB-4 confirmed the new status in absolute mode and the debug transition after enabling relative throttle.
+
 ## 0.4.0
 
 - Adds explicit presets for Aryx's MC-260 Chimera, F-16M King Viper, F-99 Shrike, FS-41 Eclipse, and OA-27 Cavalier, plus the FS-3 Ternion.

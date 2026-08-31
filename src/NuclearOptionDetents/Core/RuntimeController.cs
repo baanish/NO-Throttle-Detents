@@ -62,6 +62,7 @@ internal static class RuntimeController
     private static bool _idleGateActive;
     private static bool _afterburnerGateActive;
     private static bool _foreignThrottleBypassActive;
+    private static bool? _lastRelativeThrottleMode;
     private static readonly HashSet<string> ReportedFailures = new();
 
     /// <summary>Called once at plugin load; the reset leaves the runtime in the same state as leaving an aircraft.</summary>
@@ -258,12 +259,14 @@ internal static class RuntimeController
                 RefreshApplicableCapabilities();
                 RebuildRuntime(settings);
                 _runtime.ObserveContext(aircraft, inputs);
+                _lastRelativeThrottleMode = PlayerSettings.throttleUseRelative;
                 if (settings.DebugLogging && _log is not null)
                 {
                     _log.LogInfo(
                         $"Detents attached to {_airframeName} ({_airframeId}): " +
                         $"allowlisted={_activePreset is not null}, airbrake={_hasAirbrake}, afterburner={_hasAfterburner}, " +
-                        $"customDetents={_customDryDetentFractions.Length}, throttleUseNegative={PlayerSettings.throttleUseNegative}");
+                        $"customDetents={_customDryDetentFractions.Length}, throttleUseRelative={_lastRelativeThrottleMode}, " +
+                        $"throttleUseNegative={PlayerSettings.throttleUseNegative}");
                 }
             }
 
@@ -287,6 +290,13 @@ internal static class RuntimeController
             var axisModifierHeld = player.GetButton("Axis Modifier");
             var requestedThrottle = inputs.throttle;
             var relativeThrottle = PlayerSettings.throttleUseRelative;
+            if (_lastRelativeThrottleMode is bool previousRelativeThrottle &&
+                previousRelativeThrottle != relativeThrottle &&
+                settings.DebugLogging && _log is not null)
+            {
+                _log.LogInfo($"Throttle setting changed: throttleUseRelative={relativeThrottle}");
+            }
+            _lastRelativeThrottleMode = relativeThrottle;
             var reverseDirection = collective && PlayerSettings.invertCollective;
             var controlsEnabled = GameManager.flightControlsEnabled;
             var paused = Time.timeScale <= 0f;
@@ -506,6 +516,7 @@ internal static class RuntimeController
         _effectiveSimulatedThrottle = 0;
         _lastObservedFrame = -1;
         _foreignThrottleBypassActive = false;
+        _lastRelativeThrottleMode = null;
         if (shouldLog)
         {
             _log!.LogInfo($"Detent state reset: {reason}");

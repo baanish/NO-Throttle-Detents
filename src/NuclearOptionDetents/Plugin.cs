@@ -14,7 +14,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.baanish.nuclearoption.detents";
     public const string PluginName = "Nuclear Option Detents";
-    public const string PluginVersion = "0.4.0";
+    public const string PluginVersion = "0.4.1";
 
     private PatchInstaller? _patchInstaller;
     private ModConfig? _modConfig;
