@@ -20,10 +20,12 @@ add infrastructure to make a prototype look production-ready.
    game is not discoverable, or set `NUCLEAR_OPTION_DIR` for the same override.
 3. Flight-test behavior changes in the installed game. Record what was tested,
    with the game build and aircraft, in the release's changelog entry.
-4. For a NOMM listing, submit `dist/NuclearOptionDetents.nomnom.json` as
-   `modManifests/NuclearOptionDetents.json` in a PR to `KopterBuzz/NOMNOM`
-   (`main`), after the GitHub release is published and with the manifest's
-   download URL and SHA-256 matching the released `-nomm.zip` asset.
+4. For NOMM version updates, publish a GitHub release with the flat `-nomm.zip`
+   as its first asset. Verify the published asset order and SHA-256.
+   The existing listing has `autoUpdateArtifacts = "True"`; NOMNOM's
+   [hourly updater](https://github.com/KopterBuzz/NOMNOM/blob/main/.github/workflows/hourly_update.yml)
+   imports newer release versions using the first asset's URL and digest.
+   Do not open upstream NOMNOM PRs for version updates.
 
 ## Invariants
 
