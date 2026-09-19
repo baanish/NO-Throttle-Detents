@@ -86,6 +86,7 @@ internal static class Program
             ("sensitivity scope is limited to detented aircraft", SensitivityScopeIsLimitedToDetentedAircraft),
             ("all afterburner nozzles must match", AllAfterburnerNozzlesMustMatch),
             ("modded afterburner nozzle counts are pinned", ModdedAfterburnerNozzleCountsArePinned),
+            ("F-22E detent holds at HUD military power", F22DetentHoldsAtHudMilitaryPower),
             ("AB-4 requires all four afterburner nozzles", Ab4RequiresFourAfterburnerNozzles),
             ("live afterburner start is the conservative boundary", LiveAfterburnerStartIsConservativeBoundary),
             ("unreadable afterburner nozzle rejects confirmation", UnreadableAfterburnerNozzleRejectsConfirmation),
@@ -1082,6 +1083,7 @@ internal static class Program
             ("AttackHelo1", "SAH-46 Chicane", true, AirbrakePath.None, false, null, null, null, null),
             ("Aryx_CargoPlane1", "MC-260 Chimera", false, AirbrakePath.Split, false, 0f, null, null, null),
             ("Aryx_F16M_KingViper", "F-16M King Viper", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
+            ("Aryx_F22E_StrikeRaptor", "F-22E Strike Raptor", false, AirbrakePath.Component, true, 0f, 2, 0.95f, 1f),
             ("Aryx_Interceptor1", "FS-41 Eclipse", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
             ("Aryx_LightFighter1", "F-99 Shrike", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
             ("Aryx_PropAttacker1", "OA-27 Cavalier", false, AirbrakePath.Split, false, 0f, null, null, null),
@@ -1130,6 +1132,7 @@ internal static class Program
             "Fighter1", "SmallFighter1", "trainer", "VTOLTrainer1",
             "Aryx_CargoPlane1", "Aryx_F16M_KingViper", "Aryx_Interceptor1",
             "Aryx_LightFighter1", "Aryx_PropAttacker1", "P_Trisurface1",
+            "Aryx_F22E_StrikeRaptor",
         };
         foreach (var id in detentedIds)
         {
@@ -1604,28 +1607,68 @@ internal static class Program
 
     private static void ModdedAfterburnerNozzleCountsArePinned()
     {
-        var expectedCounts = new (string Id, int Count)[]
+        var expectedCounts = new (string Id, int Count, float Start, float Boundary)[]
         {
-            ("Aryx_F16M_KingViper", 1),
-            ("Aryx_Interceptor1", 2),
-            ("Aryx_LightFighter1", 2),
-            ("P_Trisurface1", 2),
+            ("Aryx_F16M_KingViper", 1, 0.9f, 0.9f),
+            ("Aryx_F22E_StrikeRaptor", 2, 0.95f, 0.9f),
+            ("Aryx_Interceptor1", 2, 0.9f, 0.9f),
+            ("Aryx_LightFighter1", 2, 0.9f, 0.9f),
+            ("P_Trisurface1", 2, 0.9f, 0.9f),
         };
 
-        foreach (var (id, count) in expectedCounts)
+        foreach (var (id, count, start, boundary) in expectedCounts)
         {
             True(AirframePresetCatalog.TryGet(id, out var preset));
-            var nozzles = Enumerable.Repeat(NozzleWithRange(0.9f, 1f), count).ToArray();
-            True(AfterburnerCompatibility.TryAggregatePinnedRanges(preset, nozzles, out _, out _));
+            var nozzles = Enumerable.Repeat(NozzleWithRange(start, 1f), count).ToArray();
+            True(AfterburnerCompatibility.TryAggregatePinnedRanges(preset, nozzles, out var liveStart, out var liveEnd));
+            Near(start, liveStart);
+            Near(1, liveEnd);
+            Equal((float?)boundary, preset.AfterburnerDetentBoundary);
+            Near(boundary, AfterburnerCompatibility.ResolveDetentBoundary(preset, liveRangeConfirmed: true, liveStart));
+            Near(boundary, AfterburnerCompatibility.ResolveDetentBoundary(preset, liveRangeConfirmed: false, 0));
+            Near(boundary - 0.0004f, AfterburnerCompatibility.ResolveDetentBoundary(preset, liveRangeConfirmed: true, boundary - 0.0004f));
+            False(AfterburnerCompatibility.TryAggregatePinnedRanges(preset, nozzles[..^1], out _, out _));
             False(AfterburnerCompatibility.TryAggregatePinnedRanges(
                 preset,
-                nozzles.Append(NozzleWithRange(0.9f, 1f)).ToArray(),
+                nozzles.Append(NozzleWithRange(start, 1f)).ToArray(),
                 out _,
                 out _));
 
-            nozzles[0] = NozzleWithRange(0.85f, 1f);
+            nozzles[0] = NozzleWithRange(start - 0.05f, 1f);
             False(AfterburnerCompatibility.TryAggregatePinnedRanges(preset, nozzles, out _, out _));
         }
+    }
+
+    private static void F22DetentHoldsAtHudMilitaryPower()
+    {
+        True(AirframePresetCatalog.TryGet("Aryx_F22E_StrikeRaptor", out var preset));
+        var boundary = AfterburnerCompatibility.ResolveDetentBoundary(preset, liveRangeConfirmed: true, 0.95f);
+        Near(0.9, boundary);
+        var runtime = new DetentRuntime(afterburnerBoundary: boundary);
+        var holding = runtime.Update(new DetentRuntimeInput(0, 0.9, ThrottleCommand.Increase));
+        Equal(EndpointDetentState.Holding, holding.AfterburnerState);
+        var held = Hold(0.9, holding.AfterburnerState);
+        True(held.AfterburnerHeld);
+        Near(0.8999, held.EffectiveThrottle);
+        Near(0.7998, held.SimulatedThrottle);
+        True(held.EffectiveThrottle >= 0.88 && held.EffectiveThrottle < 0.9);
+
+        var pending = runtime.Update(new DetentRuntimeInput(0.1, 0.9, ThrottleCommand.Increase));
+        True(Hold(0.9, pending.AfterburnerState).AfterburnerHeld);
+        var released = runtime.Update(new DetentRuntimeInput(0.2, 0.9, ThrottleCommand.Increase));
+        True(released.AfterburnerUnlocked);
+        var dry = Hold(0.9, released.AfterburnerState);
+        False(dry.AfterburnerHeld);
+        Near(0.9, dry.EffectiveThrottle);
+        var burning = runtime.Update(new DetentRuntimeInput(0.3, 0.95, ThrottleCommand.Increase));
+        var passed = Hold(0.95, burning.AfterburnerState);
+        False(passed.AfterburnerHeld);
+        Near(0.95, passed.EffectiveThrottle);
+
+        ThrottleBoundaryHoldResult Hold(double requested, EndpointDetentState state) =>
+            ThrottleBoundaryHold.Apply(new ThrottleBoundaryHoldInput(
+                requested, requested * 2 - 1, ThrottleCommand.Increase,
+                EndpointDetentState.Locked, state, 0, boundary, 0.001));
     }
 
     private static void Ab4RequiresFourAfterburnerNozzles()
