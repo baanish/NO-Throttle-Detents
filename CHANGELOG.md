@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3
+
+- Adds an explicit preset for Aryx's F-22E Strike Raptor 1.0.0, with component airbrakes and two afterburner nozzles at `0.95..1.0`.
+- Places the F-22E's upper detent at its HUD MIL boundary, `0.90`, while still requiring both nozzles to match their actual range.
+- Separates an aircraft's upper detent position from its nozzle compatibility range. Other aircraft retain their existing boundaries.
+- A regression test pins the F-22E hold at `0.8999`, its signed throttle accumulator, and release after the configured dwell.
+- A user flight check on Nuclear Option 0.34.2, Steam build 24724372, confirmed the MIL stop in the F-22E Strike Raptor 1.0.0 with Detents 0.4.3. The live log confirmed both detent capabilities; this check does not establish multiplayer behavior.
+
 ## 0.4.1
 
 - Replaces the ambiguous absolute-throttle status with a direct instruction to enable `Use Throttle Relative Axis`.

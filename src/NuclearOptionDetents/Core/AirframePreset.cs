@@ -18,12 +18,14 @@ internal sealed class AirframePreset
         float? idleAirbrakeBoundary,
         int? afterburnerNozzleCount,
         float? afterburnerStart,
-        float? afterburnerEnd)
+        float? afterburnerEnd,
+        float? afterburnerDetentBoundary = null)
     {
         (Id, DisplayName, Collective, AirbrakePath, HasAfterburner,
             IdleAirbrakeBoundary, AfterburnerNozzleCount, AfterburnerStart, AfterburnerEnd) =
             (id, displayName, collective, airbrakePath, hasAfterburner,
             idleAirbrakeBoundary, afterburnerNozzleCount, afterburnerStart, afterburnerEnd);
+        AfterburnerDetentBoundary = afterburnerDetentBoundary ?? afterburnerStart;
     }
 
     public string Id { get; }
@@ -45,6 +47,8 @@ internal sealed class AirframePreset
     public float? AfterburnerStart { get; }
 
     public float? AfterburnerEnd { get; }
+
+    public float? AfterburnerDetentBoundary { get; }
 }
 
 internal enum AirframeFeature
@@ -101,7 +105,7 @@ internal static class AfterburnerCompatibility
         bool liveRangeConfirmed,
         float liveStart)
     {
-        var presetStart = preset?.AfterburnerStart ?? 1f;
+        var presetStart = Math.Min(preset?.AfterburnerDetentBoundary ?? 1f, preset?.AfterburnerStart ?? 1f);
         return liveRangeConfirmed && RangeIsFinite(liveStart)
             ? Math.Min(presetStart, liveStart)
             : presetStart;
@@ -193,6 +197,8 @@ internal static class AirframePresetCatalog
         new("AttackHelo1", "SAH-46 Chicane", true, AirbrakePath.None, false, null, null, null, null),
         new("Aryx_CargoPlane1", "MC-260 Chimera", false, AirbrakePath.Split, false, 0f, null, null, null),
         new("Aryx_F16M_KingViper", "F-16M King Viper", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
+        // Stop at the HUD military-power limit; engine validation still requires both nozzles at 0.95.
+        new("Aryx_F22E_StrikeRaptor", "F-22E Strike Raptor", false, AirbrakePath.Component, true, 0f, 2, 0.95f, 1f, afterburnerDetentBoundary: 0.9f),
         new("Aryx_Interceptor1", "FS-41 Eclipse", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
         new("Aryx_LightFighter1", "F-99 Shrike", false, AirbrakePath.Component, true, 0f, 2, 0.9f, 1f),
         new("Aryx_PropAttacker1", "OA-27 Cavalier", false, AirbrakePath.Split, false, 0f, null, null, null),

@@ -81,7 +81,10 @@ cached until either aircraft identity changes.
 ## Boundary output and capability checks
 
 The local throttle output is parked at `0.0001` above idle or `0.0001` below
-the captured afterburner boundary. The offset stays representable through the
+the preset's upper detent boundary. This normally matches the captured nozzle
+start; the F-22E uses its earlier HUD MIL limit while retaining separate nozzle
+range validation. A confirmed lower nozzle start still limits the stop.
+The offset stays representable through the
 game's half-precision network value while remaining inside the vanilla
 changeover. The shared throttle value then reaches the aircraft's normal
 airbrake, split-surface, engine, and afterburner code.

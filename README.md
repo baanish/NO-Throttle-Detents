@@ -27,7 +27,7 @@ until you move away from that end again. Both hold times are configurable
 ![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
 
 The mod only touches the local player's relative-throttle input. It
-recognizes 19 aircraft and activates detents on 14 (listed in
+recognizes 20 aircraft and activates detents on 15 (listed in
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
 afterburner on by itself. Absolute/HOTAS throttle mode, helicopters, AI, and
 remote aircraft are untouched, as are weapons and
@@ -38,7 +38,7 @@ The Aircraft Profile menu lists every aircraft in the game's installed
 catalog. An opt-in profile can support an unknown aircraft or add interior
 detents to a built-in aircraft. Unknown aircraft without an enabled profile
 stay vanilla. Built-in add-on presets cover the MC-260 Chimera, F-16M King
-Viper, F-99 Shrike, FS-41 Eclipse, OA-27 Cavalier, and FS-3 Ternion.
+Viper, F-22E Strike Raptor, F-99 Shrike, FS-41 Eclipse, OA-27 Cavalier, and FS-3 Ternion.
 
 Auto Hover temporarily bypasses both detents and the sensitivity multiplier;
 turning it off restores them for the local aircraft.
