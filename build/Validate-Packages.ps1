@@ -48,8 +48,12 @@ function Assert-Package([string]$Path, [ValidateSet('Nomm','PluginOnly','Standal
             }
         }
         else {
+            # Doorstop loads BepInEx.Preloader.dll; the other core DLLs are its references.
             foreach ($required in '.doorstop_version','doorstop_config.ini','winhttp.dll','README-FIRST.txt',
-                                  'BepInEx/core/BepInEx.dll','BepInEx/config/BepInEx.cfg',
+                                  'BepInEx/core/BepInEx.Preloader.dll','BepInEx/core/BepInEx.dll',
+                                  'BepInEx/core/0Harmony.dll','BepInEx/core/HarmonyXInterop.dll','BepInEx/core/Mono.Cecil.dll',
+                                  'BepInEx/core/MonoMod.RuntimeDetour.dll','BepInEx/core/MonoMod.Utils.dll',
+                                  'BepInEx/config/BepInEx.cfg',
                                   'BepInEx/config/com.baanish.nuclearoption.detents.cfg',
                                   'licenses/BepInEx-LGPL-2.1.txt','licenses/BepInEx-MIT.txt','THIRD_PARTY_NOTICES.md') {
                 if ($names -notcontains $required) { throw "Standalone package is missing '$required'." }
