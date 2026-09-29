@@ -71,8 +71,8 @@ patch-table lookup.
 
 The fixed-update path performs constant work on the local pilot's throttle. It
 does not iterate over the aircraft in a mission. Capability discovery scans
-for components when the local player enters an aircraft, with three bounded
-retries if an expected component has not loaded yet.
+for components when the local player enters an aircraft, retrying for a
+bounded time (below) if an expected component has not loaded yet.
 
 Network Validation is separate from normal operation. When enabled, it tracks
 the local aircraft and one selected remote aircraft. Component references stay
