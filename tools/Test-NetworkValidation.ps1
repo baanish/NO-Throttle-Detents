@@ -117,6 +117,10 @@ function Test-IdleSequence($Segment) {
     return New-Check 'idle/airbrake' 'FAIL' 'airbrake did not open after the recorded crossing'
 }
 
+# Nozzle start where it differs from the 0.9 MIL detent (AirframePreset.cs).
+# The log records the aircraft ID but not the nozzle range.
+$AfterburnerStartByAircraft = @{ Aryx_F22E_StrikeRaptor = 0.95 }
+
 function Test-AfterburnerSequence($Segment) {
     $samples = @($Segment.Samples)
     if (-not @($samples | Where-Object { $null -ne (Get-Number $_ 'ab') }).Count) {
@@ -140,16 +144,19 @@ function Test-AfterburnerSequence($Segment) {
         }
     }
 
+    $afterburnerStart = if ($AfterburnerStartByAircraft.ContainsKey($Segment.Aircraft)) {
+        $AfterburnerStartByAircraft[$Segment.Aircraft]
+    } else { 0.9 }
     $crossingIndex = -1
     for ($index = $holdIndexes[-1] + 1; $index -lt $samples.Count; $index++) {
         $throttle = Get-Number $samples[$index] 'throttle'
-        if ($null -ne $throttle -and $throttle -ge 0.9001) {
+        if ($null -ne $throttle -and $throttle -ge $afterburnerStart + 0.0001) {
             $crossingIndex = $index
             break
         }
     }
     if ($crossingIndex -lt 0) {
-        return New-Check 'MIL/afterburner' 'INCONCLUSIVE' 'hold was seen but no later afterburner crossing was recorded'
+        return New-Check 'MIL/afterburner' 'INCONCLUSIVE' "hold was seen but no later sample crossed the $afterburnerStart nozzle start"
     }
     for ($index = $crossingIndex; $index -lt $samples.Count; $index++) {
         $amount = Get-Number $samples[$index] 'ab'
@@ -308,6 +315,21 @@ function Invoke-SelfTest {
         $_.Detail -eq 'set NetworkValidationOwner and recapture; available remote owners: 3, 4'
     }).Count) {
         throw 'Local-only fixture did not report the available remote owners.'
+    }
+
+    $f22Sample = 'NOD-NET|v=1|event=sample|scope=remote|owner=5|aircraft=Aryx_F22E_StrikeRaptor|throttle={0}|airbrakeActive=0|airbrakeOpen=0.000000|split=na|ab={1}|idleHeld=na|abHeld=na'
+    $f22Dry = @(
+        'NOD-NET|v=1|event=attach|scope=remote|owner=5|aircraft=Aryx_F22E_StrikeRaptor|airbrakes=1|splitSurfaces=0|nozzles=2',
+        ($f22Sample -f '0.899900', '0.000000'),
+        ($f22Sample -f '0.899900', '0.000000'),
+        ($f22Sample -f '0.930000', '0.000000'))
+    $checks = @(Invoke-NetworkAnalysis $f22Dry 5 'remote')
+    if (-not @($checks | Where-Object { $_.Name -eq 'MIL/afterburner' -and $_.Status -eq 'INCONCLUSIVE' }).Count) {
+        throw 'F-22E dry release below its 0.95 nozzle start was not inconclusive.'
+    }
+    $checks = @(Invoke-NetworkAnalysis @($f22Dry + ($f22Sample -f '0.960000', '0.200000')) 5 'remote')
+    if (-not @($checks | Where-Object { $_.Name -eq 'MIL/afterburner' -and $_.Status -eq 'PASS' }).Count) {
+        throw 'F-22E afterburner past its 0.95 nozzle start did not pass.'
     }
     Write-Output 'Network validation analyzer self-test passed.'
 }
