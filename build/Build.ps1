@@ -65,7 +65,8 @@ function Get-DotNet {
             Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $script
         }
         New-Item -ItemType Directory -Force -Path (Split-Path $local) | Out-Null
-        & pwsh -NoProfile -File $script -Version $sdkVersion -InstallDir (Split-Path $local) -NoPath
+        # Out-Host keeps the installer log out of this function's return value.
+        & pwsh -NoProfile -File $script -Version $sdkVersion -InstallDir (Split-Path $local) -NoPath | Out-Host
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path $local -PathType Leaf)) { throw 'Unable to install the pinned .NET SDK.' }
     }
     return $local
