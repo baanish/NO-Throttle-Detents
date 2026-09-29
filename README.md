@@ -88,9 +88,10 @@ The toggle is in the game's own Controls menu, beside Invert Pitch and the
 sensitivity sliders, not in the F1 Configuration Manager. It is off in a new
 install, and the game's controls reset turns it off again.
 
-Until it is on, the mod's `RuntimeStatus` line in the F1 menu reads
-`NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls` and the
-throttle stays vanilla.
+Until it is on, the throttle stays vanilla and the mod's `RuntimeStatus` line
+in the F1 menu reads
+`NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls`. In an
+unsupported or collective aircraft, the status names that reason instead.
 
 ## Configuration
 
