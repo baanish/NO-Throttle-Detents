@@ -90,8 +90,9 @@ install, and the game's controls reset turns it off again.
 
 Until it is on, the throttle stays vanilla and the mod's `RuntimeStatus` line
 in the F1 menu reads
-`NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls`. In an
-unsupported or collective aircraft, the status names that reason instead.
+`NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls`. While
+the mod is off or still starting, or in an unsupported or collective aircraft,
+the status names that reason instead.
 
 ## Configuration
 
