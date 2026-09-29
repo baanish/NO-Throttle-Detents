@@ -1,218 +1,170 @@
 # Nuclear Option Detents
 
-A small client-side BepInEx 5 mod for the Windows Steam version of Nuclear
-Option that stops you from opening the airbrake or lighting the afterburner
-by accident.
+A client-side BepInEx 5 mod for the Windows Steam version of Nuclear Option.
+It stops you from opening the airbrake or lighting the afterburner by accident
+when you fly with the keyboard or a relative throttle.
 
-With a keyboard throttle, the ends of the throttle range are also switches:
-reaching 0% opens the automatic airbrake, and pushing past full dry thrust
-engages the afterburner. The throttle slides while the key is held, so
-releasing a millisecond too late deploys the airbrake on final or lights the
-burner when you wanted full military power.
+With a keyboard or relative throttle, the ends of the range are also
+switches. Reaching 0% opens the automatic airbrake, and pushing past full dry
+thrust engages the afterburner. The throttle keeps sliding while you hold the key, so letting go
+a moment too late deploys the airbrake on final or lights the burner when you
+wanted full military power.
 
-This mod adds a detent at each end, like the physical stop on a real HOTAS
-throttle. The throttle catches at the boundary instead of sliding straight
-through, giving you a window to release the key:
+This mod adds a detent at each end, like the stop on a real HOTAS throttle.
+The throttle catches at the boundary, and you keep holding to go through:
 
-- Just above 0%: keep holding decrease for 200 ms to reach true idle and let
-  the automatic airbrake open.
-- At full dry thrust: keep holding increase for 200 ms to enter afterburner.
+- Just above 0%, hold decrease for 200 ms to reach idle and let the airbrake
+  open.
+- At full dry thrust, hold increase for 200 ms to enter afterburner.
 
-Release the key early and the throttle just stays at the stop; nothing
-triggers. Once you've pushed through, the throttle behaves exactly as vanilla
-until you move away from that end again. Both hold times are configurable
-(0 to 2000 ms) and each detent can be disabled.
+Let go early and the throttle stays at the stop. Once you are through, the
+throttle behaves as vanilla until you move away from that end again. Both
+hold times are adjustable, and either detent can be turned off.
 
 ![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
 
-The mod only touches the local player's keyboard or button throttle input.
-It works with the game's Use Throttle Relative Axis setting on or off. It
-recognizes 20 aircraft and activates detents on 15 (listed in
-[docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
-afterburner on by itself. Analog throttle axes (HOTAS levers, sliders, and
-sticks) are not supported and stay vanilla. Helicopters, AI, remote aircraft,
-weapons, and networking are untouched. Multiplayer use is unverified, and hosts or server moderators may
-prohibit BepInEx or this mod.
-
-The Aircraft Profile menu lists every aircraft in the game's installed
-catalog. An opt-in profile can support an unknown aircraft or add interior
-detents to a built-in aircraft. Unknown aircraft without an enabled profile
-stay vanilla. Built-in add-on presets cover the MC-260 Chimera, F-16M King
-Viper, F-22E Strike Raptor, F-99 Shrike, FS-41 Eclipse, OA-27 Cavalier, and FS-3 Ternion.
-
-Auto Hover temporarily bypasses both detents and the sensitivity multiplier;
-turning it off restores them for the local aircraft.
-
-This is a v0.4 prototype. Installed-build notes for contributors are in
-[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+The mod changes only the local player's throttle input. It never turns the
+afterburner on by itself. An analog throttle axis in absolute mode,
+helicopters and other collective aircraft, AI, and other players' aircraft
+stay vanilla.
 
 ## Install
 
-Download the plugin-only, standalone, or NOMM ZIP from the
+Download one ZIP from the
 [releases page](https://github.com/baanish/NO-Throttle-Detents/releases).
-Each release includes a `SHA256SUMS.txt` for the archives. Building from
-source is optional; see the section below.
+`SHA256SUMS.txt` on the same page lists each archive's hash.
 
-For an existing BepInEx installation, extract the plugin-only ZIP into the
-folder containing `NuclearOption.exe` and merge its `BepInEx` folder. The
-plugin is installed at:
+| You have | Download | Do this |
+| --- | --- | --- |
+| No BepInEx | `-standalone-fresh-install-win-x64.zip` | Extract its contents beside `NuclearOption.exe`, with no extra folder. It includes BepInEx 5.4.23.5 and the default config. |
+| BepInEx 5 already | `-plugin-only.zip` | Extract it beside `NuclearOption.exe` and merge the `BepInEx` folder. It leaves your BepInEx and mod config alone. |
+| Nuclear Option Mod Manager | `-nomm.zip` | Install through NOMM, which supplies BepInEx. Do not extract it into the game folder. |
 
-```text
-BepInEx\plugins\NuclearOptionDetents\NuclearOptionDetents.dll
-```
+BepInEx 6 does not load this mod.
 
-For a fresh install, extract the standalone ZIP directly beside
-`NuclearOption.exe`. It includes BepInEx and the mod's default config. Do not
-add an extra wrapper directory or extract it over an existing BepInEx
-installation. This release supports BepInEx 5; BepInEx 6 will not load it.
+Launch the game. `BepInEx\LogOutput.log` should contain
+`Nuclear Option Detents <version> loaded.`
 
-The mod config is:
+## Analog throttle axis: turn on relative throttle
 
-```text
-BepInEx\config\com.baanish.nuclearoption.detents.cfg
-```
+Keyboard and button throttles get detents with the game's **Use Throttle
+Relative Axis** toggle on or off. An analog throttle axis (HOTAS lever,
+slider) needs it on. With it off, the axis stays vanilla so the mod never
+fights a physical lever. The toggle is in the game's own Controls menu, beside
+Invert Pitch and the sensitivity sliders, not in the F1 Configuration Manager.
+It is off in a new install, and the game's controls reset turns it off again.
 
-The standalone ZIP includes the default file. The plugin-only ZIP omits it;
-BepInEx creates it on first launch and preserves existing settings.
+When an analog axis moves the throttle with the toggle off, the mod's
+`RuntimeStatus` line in the F1 menu reads
+`NOT APPLICABLE - Analog throttle needs Use Throttle Relative Axis in game Controls`.
+While the mod is off or still starting, or in an unsupported or collective
+aircraft, the status names that reason instead.
 
-Nuclear Option Mod Manager uses the separate flat `-nomm.zip` artifact. Do not
-manually extract that archive into the game directory. NOMM installs it inside
-its managed plugin directory and supplies BepInEx.
+The F1 menu comes from
+[BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager),
+which you install separately. The mod works without it.
 
-To remove or disable only this mod, delete its plugin directory or rename the
-DLL. Leave unrelated BepInEx and game files alone.
+## Supported aircraft
 
-## Configuration
+The mod recognizes 20 aircraft and puts a detent on 15 of them: base-game
+aircraft plus optional Aryx and Ternion add-on aircraft.
+[docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md) lists each one and
+which detents it gets. An aircraft the mod does not recognize stays vanilla
+unless you turn on a custom profile for it.
 
-The default config is:
+## Custom aircraft profiles
 
-```ini
-[General]
-Enabled = true
-DebugLogging = false
-NetworkValidation = false
-NetworkValidationOwner = -1
+The Aircraft Profile menu in F1 lists every aircraft in the game's installed
+catalog, and each aircraft keeps its own profile. A profile can do two things:
 
-[Indicator]
-Enabled = true
-
-[Throttle Sensitivity]
-Multiplier = 1
-
-[Status]
-RuntimeStatus = Open the in-game Configuration Manager to see the live check.
-
-[Idle / Airbrake Detent]
-Enabled = true
-HoldMilliseconds = 200
-
-[Full Dry / Afterburner Detent]
-Enabled = true
-HoldMilliseconds = 200
-
-[Custom Aircraft]
-DetectedAircraft =
-SelectedAircraftId =
-
-[Advanced]
-EndpointEpsilon = 0.001
-ResetHysteresis = 0.02
-```
-
-Each detent has its own switch and dwell from 0 to 2000 ms. A zero dwell
-unlocks on the first qualifying endpoint update. The HUD indicator appears
-below the throttle gauge only while a detent is blocking movement. `Multiplier`
-scales keyboard throttle movement from 0.25x to 4x on aircraft with a supported
-detent; 1x preserves the game rate. Other aircraft keep vanilla sensitivity.
-`EndpointEpsilon` tolerates float noise; `ResetHysteresis` controls how far the
-throttle must move away before an unlocked detent relocks and is always at
-least the endpoint tolerance. `DebugLogging` is off by default and is useful
-when diagnosing a local install. `NetworkValidation` is a separate opt-in
-multiplayer diagnostic; keep it off during normal play. See
-[docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md) for the two-client
-check and log analyzer.
-
-The scrollable Aircraft Profile selector lists aircraft in the game's
-installed-aircraft catalog. Entering an aircraft also adds its exact `jsonKey`
-as a fallback. Each aircraft keeps an independent profile. Selecting a profile
-changes only which profile the menu edits. The runtime always uses the profile
-matching the local aircraft. Reset Profile restores only that profile. Choose
-the airbrake type and, when applicable, enter the live afterburner nozzle count
-and range.
-Those components must still match before an endpoint detent can run.
+- Give an unrecognized aircraft idle and afterburner detents. Choose its
+  airbrake type and, if it has afterburner, its nozzle count and throttle
+  range. The mod still checks that the aircraft's parts match before a detent
+  runs.
+- Add up to eight detents inside the dry range, on any non-collective
+  aircraft.
 
 ![Aircraft Profile selector showing installed aircraft and custom settings](docs/screenshots/config-aircraft-profiles.png)
 
-Each profile accepts up to eight comma-separated custom detent positions, such
-as `67,82.5`. These are the percentages shown on the cockpit throttle gauge.
-The mod reads that gauge's dry-throttle range for the active aircraft so its
-hold label and the cockpit number agree. Custom detents stop travel in both
-directions and share that profile's hold time. Values must be greater than 0
-and less than 100. A malformed list disables the custom detents.
+Enter custom detents as comma-separated percentages, such as `67,82.5`. They
+match the percentage on the aircraft's throttle gauge, stop the throttle in
+both directions, and share the profile's hold time. Each value must be above 0
+and below 100. A malformed list turns that profile's custom detents off.
 
 ![Custom 67 percent detent holding on the OA-27 flight HUD](docs/screenshots/hud-custom-detent.png)
 
-The mod does not require Configuration Manager. Cataloged aircraft get a
-generated `[Custom Aircraft Profile ...]` section that can be edited in the
-config file; text-file changes apply on the next launch.
+The menu you pick in F1 changes only which profile you edit. In flight, the
+mod always uses the profile of the aircraft you are sitting in. Each profile
+is also a `[Custom Aircraft Profile ...]` section in the config file. Edits to
+the file apply on the next launch.
 
-PauelsRandomFixes' ThrottleRelativeVelocity is supported. While that fix is
-active, its Relative Sensitivity setting takes priority and this mod's
-Multiplier is ignored. Detents also yields when another Harmony patch is
-actively publishing the local throttle. Other airbrake, afterburner, or
-autopilot changes may still conflict; test them together.
-Use PauelsRandomFixes if you want sensitivity control on aircraft without a
-supported detent.
+## Settings
 
-## Runtime cost and mod conflicts
+Settings live in `BepInEx\config\com.baanish.nuclearoption.detents.cfg`.
+BepInEx creates the file on first launch if the package did not include it.
 
-Normal operation patches one local-pilot throttle method. The mod does not run
-detent code on AI or remote aircraft, and it does not patch every airbrake,
-control surface, engine, or afterburner in a mission. It checks the selected
-aircraft's capabilities when you enter the seat, then retries only while an
-expected component is still loading.
+| Section | Setting | Default | Range | Effect |
+| --- | --- | --- | --- | --- |
+| General | `Enabled` | `true` | | Off makes the whole mod vanilla. |
+| General | `DebugLogging` | `false` | | Logs aircraft attach and reset events to `BepInEx\LogOutput.log`. |
+| General | `NetworkValidation`, `NetworkValidationOwner` | `false`, `-1` | owner -1 to 255 | Multiplayer diagnostic, off for normal play. See [docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md). |
+| Indicator | `Enabled` | `true` | | Shows the hold below the HUD throttle gauge while a detent stops the throttle. |
+| Throttle Sensitivity | `Multiplier` | `1` | 0.25 to 4 | Scales relative-throttle speed on aircraft with a detent. Other aircraft keep the game's rate. |
+| Idle / Airbrake Detent | `Enabled`, `HoldMilliseconds` | `true`, `200` | 0 to 2000 ms | The idle detent and its hold time. 0 lets the throttle through on the first push. |
+| Full Dry / Afterburner Detent | `Enabled`, `HoldMilliseconds` | `true`, `200` | 0 to 2000 ms | The afterburner detent and its hold time. |
+| Advanced | `EndpointEpsilon` | `0.001` | 0.00001 to 0.05 | How close to a boundary the throttle must be to start a hold. |
+| Advanced | `ResetHysteresis` | `0.02` | 0.001 to 0.10 | How far the throttle must move back before a passed detent locks again. Never less than `EndpointEpsilon`. |
 
-At each seat entry, the mod checks whether another Harmony patch shares the
-throttle method. If that patch publishes a value outside the game's relative
-throttle accumulator, detents and sensitivity yield until vanilla control
-returns. This avoids competing with active autopilot or throttle overrides
-without disabling Detents just because another mod is installed.
+Any throttle input that moves the throttle counts as holding, whether it
+comes from a key or an analog axis.
 
-Network Validation is the expensive diagnostic path. It remains off by
-default. When enabled with Debug Logging, it samples only the local aircraft
-and one selected remote aircraft at 10 Hz.
+Auto Hover bypasses the detents and the sensitivity multiplier while it is on.
 
-## Compatibility and testing
+## Other mods
 
-The installed-build snapshot in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)
-records the game version, patch points, and fields inspected during
-development. It is contributor reference, not a promise that future game
-builds will work. After a game update, run the mod and the focused core tests;
-those tests do not exercise Harmony installation or live-game integration.
+- PauelsRandomFixes' ThrottleRelativeVelocity fix works with the detents. While it is active, its
+  Relative Sensitivity setting replaces this mod's `Multiplier`. Use it if you
+  want sensitivity control on aircraft without a detent.
+- If another mod takes over the local throttle, such as an autopilot, the
+  detents step aside until the game's own throttle control returns.
+- Other airbrake, afterburner, or autopilot mods may still conflict. Test them
+  together.
 
-Recorded v0.1 testing covered identity and readiness on all 13 allowlisted
-airframes plus reduced-dwell upper/lower control-path checks on FS-12, FS-20,
-KR-67, and AB-4.
+## Multiplayer
+
+Multiplayer use is unverified. Server hosts and moderators may prohibit
+BepInEx or this mod. The mod runs only on your client and does not touch
+networking, weapons, or other players' aircraft.
+
+## Testing status
+
+This is a v0.4 prototype. Each release in [CHANGELOG.md](CHANGELOG.md) records
+its manual checks and the game build they ran on. The latest checks were on Nuclear
+Option 0.34.2, Steam build 24724372. A game update can break the throttle
+patch. If it does, the mod logs the failure and leaves the throttle vanilla.
+
+## Uninstall
+
+Delete `BepInEx\plugins\NuclearOptionDetents`, and optionally
+`BepInEx\config\com.baanish.nuclearoption.detents.cfg`. NOMM users remove it
+in NOMM. Leave other BepInEx and game files alone.
 
 ## Build from source
 
-From PowerShell 7, run the one-command build:
+From PowerShell 7:
 
 ```powershell
 pwsh ./build/Build.ps1
 ```
 
-The script runs the focused core tests and network-analyzer self-test, builds
-the Release plugin, creates the NOMM, manual plugin-only, and standalone ZIP
-layouts, and validates their contents. It finds Nuclear Option through Steam
-locations when possible.
-To select it explicitly, pass a directory or set the environment variable:
+The script runs the focused tests, builds the Release plugin, and writes the
+three validated ZIPs to `dist`. It finds Nuclear Option through Steam. To
+point it at a specific install, pass `-GameDir 'C:\path\to\Nuclear Option'`
+or set `NUCLEAR_OPTION_DIR`.
 
-```powershell
-pwsh ./build/Build.ps1 -GameDir 'C:\Games\Nuclear Option'
-$env:NUCLEAR_OPTION_DIR = 'C:\Games\Nuclear Option'
-pwsh ./build/Build.ps1
-```
+Contributor docs: [how it works](docs/DESIGN.md),
+[game-build compatibility](docs/COMPATIBILITY.md), and
+[airframe presets](docs/AIRFRAME-PRESETS.md).
 
-Artifacts are written to `dist`. The source is MIT licensed; see
-`THIRD_PARTY_NOTICES.md` for bundled dependency attribution.
+MIT licensed. Bundled dependency attribution is in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

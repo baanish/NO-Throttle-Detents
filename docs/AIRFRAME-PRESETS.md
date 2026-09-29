@@ -1,11 +1,21 @@
 # Airframe presets
 
-The mod uses an explicit allowlist keyed by the installed build's `UnitDefinition.jsonKey`.
-It recognizes the 20 IDs below; 15 of them have an airbrake or afterburner capability, so
-detents activate only on those.
-The preset is selected only after the local `Unit.definition` and its `jsonKey` are resolved.
-Unknown, missing, or newly released IDs stay vanilla unless the player enables
-their detected-aircraft profile.
+`AirframePresetCatalog` in `src/NuclearOptionDetents/Core/AirframePreset.cs`
+holds 20 presets keyed by `UnitDefinition.jsonKey`, matched without regard to
+case. 15 of them are non-collective with an airbrake or afterburner and get
+detents. The 3 collective aircraft and the 2 with neither system stay vanilla.
+An ID with no preset stays vanilla unless the player enables a custom profile
+for it.
+
+A preset pins the airbrake path (an `Airbrake` component or a split
+`ControlSurface`), the afterburner nozzle count and range, and optionally an
+earlier upper detent. It does not pin split-surface names or `maxSplit`
+values. The `maxSplit` figures below are capture notes. Afterburner ranges are
+the full-dry to afterburner boundary in public throttle, not a percentage the
+HUD shows. At runtime, live components must still match the preset before a
+detent runs ([DESIGN.md](DESIGN.md#capability-discovery-confirms-parts-at-seat-entry)).
+
+## Base game
 
 | `jsonKey` | Airframe | Collective | Airbrake | Afterburner |
 | --- | --- | ---: | ---: | ---: |
@@ -23,7 +33,17 @@ their detected-aircraft profile.
 | `FastBomber1` | Alkyon AB-4 | no | split (capture `maxSplit=60`) | yes (`0.900000..1.000000`, 4 nozzles) |
 | `trainer` | T/A-30 Compass | no | Airbrake component | no |
 
-## Optional aircraft mods
+The values are a capability capture from live aircraft loaded into a mission:
+`jsonKey`, collective mode, owned `Airbrake` components, `maxSplit` on split
+airbrakes, and each owned `JetNozzle`'s afterburner range. The AB-4's upper
+detent needs all four nozzles to match.
+
+Manual checks in [CHANGELOG.md](../CHANGELOG.md): 0.1.0 checked identity and
+readiness on all 13 and ran reduced-dwell upper and lower checks on the FS-12,
+FS-20, KR-67, and AB-4. Live QA in 0.3.0 covered all 13 on Steam build
+24724372, with the FS-20 and KR-67 exercising both detents.
+
+## Add-on aircraft
 
 | Add-on | Version inspected | `jsonKey` | Airframe | Airbrake | Afterburner |
 | --- | --- | --- | --- | --- | --- |
@@ -35,52 +55,53 @@ their detected-aircraft profile.
 | Aryx OA-27 Cavalier | 1.0.0 | `Aryx_PropAttacker1` | OA-27 Cavalier | split | no |
 | FS-3 Ternion | 1.0.1 | `P_Trisurface1` | FS-3 Ternion | split | yes (`0.900000..1.000000`, 2 nozzles) |
 
-These add-on values come from the serialized `AircraftDefinition.jsonKey`,
-local `Airbrake`, positive `ControlSurface.maxSplit`, and
-`JetNozzle.afterburners` data in the installed Blueprinter aircraft bundles.
-Runtime still confirms the expected components below the selected local
-aircraft before enabling either detent.
+These values come from inspecting the serialized `AircraftDefinition.jsonKey`,
+`Airbrake`, positive `ControlSurface.maxSplit`, and `JetNozzle.afterburners`
+data in the installed Blueprinter aircraft bundles. The mod has no dependency
+on Blueprinter or the aircraft mods.
 
-The F-22E 1.0.0 bundle contains eight `Airbrake` components owned by its
-aircraft, no positive `ControlSurface.maxSplit`, and two `JetNozzle` components
-with one afterburner stage each at `0.949999988079071..1.0`.
-Its `takeoffDistance=350` selects non-collective controls in the inspected game.
-The preset validates those nozzle values but deliberately places the upper
-detent at the HUD's MIL limit, `0.90`. Holding just below `0.95` instead produces
-an `AFTERBURNER 50%` indication. At the MIL stop, public throttle is
-`0.8999`, inside the HUD's `0.88..0.90` MIL region.
+Manual checks in [CHANGELOG.md](../CHANGELOG.md), all on Steam build 24724372:
+0.4.0 loaded the MC-260, F-16M, F-99, FS-41, OA-27, and FS-3 and confirmed
+their expected components in the live log. The OA-27 held a custom 67%
+detent, and an MC-260 ground roll confirmed that its thrust reverser still
+works. The reverser stays under the add-on's own Brake-plus-throttle controls,
+and this mod does not patch it. 0.4.3 flight-checked the F-22E MIL stop.
 
-F-22E inspection used Mono.Cecil to extract the embedded `.nobp` resource from
-`Aryx_F22E_StrikeRaptor_1.0.0.dll`, then UnityPy 1.21.3 to read its serialized
-components and Blueprinter patch manifest. The DLL SHA-256 was
-`A0DF4979C2183EF7A4AE8D6A9DC7CDE3502E52801B1A3C601A99A38FB88E612A`.
-The live flight log on Steam build 24724372 confirmed the exact aircraft ID,
-eight owned airbrakes, and both matching nozzles. A user flight check confirmed
-the MIL stop in Detents 0.4.3 on Nuclear Option 0.34.2, Steam build 24724372.
+### F-22E stops at MIL, not at its nozzle start
 
-The MC-260's idle detent applies to its split airbrake. Its separate thrust
-reverser remains under the aircraft mod's controls: hold Brake, apply more than
-25% throttle, keep the gear down below 50 m radar altitude, and begin above
-3 m/s. Nuclear Option Detents does not patch the reverser; a live ground-roll
-check confirmed both can remain enabled together.
+The F-22E 1.0.0 bundle has eight owned `Airbrake` components, no positive
+`ControlSurface.maxSplit`, and two `JetNozzle` components with one afterburner
+stage each at `0.949999988079071..1.0`. Its `takeoffDistance=350` selects
+non-collective controls in the inspected game.
 
-The base-game table values came from live aircraft loaded into a mission:
-`UnitDefinition.jsonKey`, collective mode, local `Airbrake` components,
-`ControlSurface.maxSplit` for split airbrakes, and the afterburner range on
-each local `JetNozzle`.
+Holding just below `0.95` shows `AFTERBURNER 50%` on the HUD, so the preset
+places the upper detent at the HUD's MIL limit, `0.90`, and still requires
+both nozzles to match `0.95..1.0`. At the stop, public throttle is `0.8999`,
+inside the HUD's `0.88..0.90` MIL region.
 
-A preset pins the airbrake path (component or split), afterburner range, and
-nozzle count. It can specify an earlier upper detent for the aircraft's MIL
-limit without relaxing nozzle validation. The runtime confirms capabilities
-from components below the selected local aircraft. It does not pin a split-surface name or `maxSplit`
-value; the parenthetical `maxSplit` figures are capture notes. A missing, extra,
-unreadable, or mismatched nozzle leaves the afterburner detent vanilla, and the
-AB-4 needs all four matching nozzles. The captured ranges describe the full-dry
-to afterburner boundary, not a user-visible 100% throttle value. The table
-documents aircraft capabilities, not physical detent behavior.
+Inspection used Mono.Cecil to extract the embedded `.nobp` resource from
+`Aryx_F22E_StrikeRaptor_1.0.0.dll` (SHA-256
+`A0DF4979C2183EF7A4AE8D6A9DC7CDE3502E52801B1A3C601A99A38FB88E612A`), then
+UnityPy 1.21.3 to read its serialized components and Blueprinter patch
+manifest. A live flight log confirmed the exact aircraft ID, eight owned
+airbrakes, and both matching nozzles.
 
-Allowlist a built-in capability only after live confirmation. Runtime discovery
-cannot enable a preset marked `no` or a collective aircraft. Each aircraft in
-the installed aircraft catalog gets an independent custom profile keyed by its
-exact ID; seat entry remains a fallback for definitions absent from that list.
-Endpoint capabilities still require matching live components.
+## Adding or changing a preset
+
+1. Capture the aircraft's `jsonKey`, collective mode, owned `Airbrake`
+   components, positive `ControlSurface.maxSplit` for a split airbrake, and
+   each owned `JetNozzle`'s afterburner count and range, from the game or
+   add-on bundle. With `DebugLogging` on, `Detents attached` reports the ID.
+   `Capability scan` reports owned component counts only once a preset or an
+   enabled exact-ID custom profile exists, and only for the airbrake path and
+   afterburner it declares, so use it to confirm a capture, not to make one.
+2. Add the preset to `AirframePresetCatalog` and a focused test in
+   `tests/NuclearOptionDetents.Tests/Program.cs`.
+3. Add a row above with its evidence, run `pwsh ./build/Build.ps1`, and
+   flight-check each detent the preset enables. Record the check in the
+   release's changelog entry.
+
+Mark a capability `yes` only after live confirmation. Runtime discovery never
+enables a capability the preset marks `no`, and never enables a collective
+aircraft. Players can cover an aircraft without a preset through a custom
+profile, which still requires matching live components.
