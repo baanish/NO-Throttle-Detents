@@ -149,6 +149,8 @@ internal sealed class InteriorDetentRuntime
 
         if (_holding)
         {
+            // A stop released to start this chained hold rearms once the parked throttle clears it.
+            RelockClearedBoundaries(_lastThrottle);
             if (!ThrottleCommands.IsDirection(input.Command, _activeDirection))
             {
                 var cancelledIndex = _activeIndex;

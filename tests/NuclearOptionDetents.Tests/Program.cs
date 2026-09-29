@@ -78,6 +78,7 @@ internal static class Program
             ("interior detent does not snap and catches the first crossing", InteriorDetentDoesNotSnapAndCatchesFirstCrossing),
             ("nearby interior detents unlock independently", NearbyInteriorDetentsUnlockIndependently),
             ("released interior detent catches the next stop", ReleasedInteriorDetentCatchesNextStop),
+            ("chained interior hold rearms the earlier stop", ChainedInteriorHoldRearmsEarlierStop),
             ("interior detent parks inside the dry range", InteriorDetentParksInsideDryRange),
             ("interior detent requires a continuous hold", InteriorDetentRequiresContinuousHold),
             ("cancelled interior detent reverses freely", CancelledInteriorDetentReversesFreely),
@@ -1443,6 +1444,29 @@ internal static class Program
         True(nextDown.IsHeld);
         Near(50, nextDown.DryPercent);
         Near(0.50 + ThrottleBoundaryHold.InwardOffset, nextDown.EffectiveThrottle);
+    }
+
+    private static void ChainedInteriorHoldRearmsEarlierStop()
+    {
+        foreach (var releaseSecond in new[] { true, false })
+        {
+            var runtime = new InteriorDetentRuntime(new[] { 0.50, 0.53 }, 0, 1, 10, 0.001, 0.02);
+            runtime.Update(InteriorInput(0, 0.49, ThrottleCommand.Neutral));
+            True(runtime.Update(InteriorInput(0.01, 0.51, ThrottleCommand.Increase)).IsHeld);
+            var chained = runtime.Update(InteriorInput(0.02, 0.54, ThrottleCommand.Increase));
+            True(chained.IsHeld);
+            Near(53, chained.DryPercent);
+            if (releaseSecond)
+            {
+                False(runtime.Update(InteriorInput(0.03, 0.54, ThrottleCommand.Increase)).IsHeld);
+            }
+
+            False(runtime.Update(InteriorInput(0.04, 0.515, ThrottleCommand.Decrease)).IsHeld);
+            False(runtime.Update(InteriorInput(0.05, 0.51, ThrottleCommand.Decrease)).IsHeld);
+            var back = runtime.Update(InteriorInput(0.06, 0.49, ThrottleCommand.Decrease));
+            True(back.IsHeld);
+            Near(50, back.DryPercent);
+        }
     }
 
     private static void InteriorDetentParksInsideDryRange()
