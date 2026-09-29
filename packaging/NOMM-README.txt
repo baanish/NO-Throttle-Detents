@@ -4,9 +4,12 @@ Multiplayer use is unverified. Hosts or server moderators may prohibit BepInEx
 or this mod.
 
 This NOMM package adds configurable hold detents at idle and at each supported
-aircraft's full-dry/afterburner boundary. It applies only to relative throttle
-controls. Collective aircraft, absolute/HOTAS mode, unknown aircraft, and
-aircraft without a matching system remain vanilla.
+aircraft's full-dry/afterburner boundary. Collective aircraft, unknown
+aircraft, and aircraft without a matching system remain vanilla.
+
+Required: turn on "Use Throttle Relative Axis" in the game's own Controls
+menu, beside Invert Pitch. It is off in a new install and is not in the F1
+menu. While it is off, the throttle stays vanilla.
 
 NOMM manages installation, updates, enabling, disabling, and removal. BepInEx
 creates com.baanish.nuclearoption.detents.cfg on first launch. Debug logging is

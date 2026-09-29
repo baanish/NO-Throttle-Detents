@@ -4,12 +4,11 @@ A small client-side BepInEx 5 mod for the Windows Steam version of Nuclear
 Option that stops you from opening the airbrake or lighting the afterburner
 by accident.
 
-With relative throttle controls (the default keyboard throttle), the ends of
-the throttle range are also switches: reaching 0% opens the automatic
-airbrake, and pushing past full dry thrust engages the afterburner. The
-throttle slides while the key is held, so releasing a millisecond too late
-deploys the airbrake on final or lights the burner when you wanted full
-military power.
+With relative throttle controls, the ends of the throttle range are also
+switches: reaching 0% opens the automatic airbrake, and pushing past full dry
+thrust engages the afterburner. The throttle slides while the key is held,
+so releasing a millisecond too late deploys the airbrake on final or lights
+the burner when you wanted full military power.
 
 This mod adds a detent at each end, like the physical stop on a real HOTAS
 throttle. The throttle catches at the boundary instead of sliding straight
@@ -81,6 +80,17 @@ its managed plugin directory and supplies BepInEx.
 
 To remove or disable only this mod, delete its plugin directory or rename the
 DLL. Leave unrelated BepInEx and game files alone.
+
+## Turn on relative throttle
+
+Detents run only when the game's **Use Throttle Relative Axis** toggle is on.
+The toggle is in the game's own Controls menu, beside Invert Pitch and the
+sensitivity sliders, not in the F1 Configuration Manager. It is off in a new
+install, and the game's controls reset turns it off again.
+
+Until it is on, the mod's `RuntimeStatus` line in the F1 menu reads
+`NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls` and the
+throttle stays vanilla.
 
 ## Configuration
 

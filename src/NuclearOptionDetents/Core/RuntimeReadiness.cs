@@ -111,7 +111,9 @@ internal static class RuntimeReadinessPolicy
 
         if (!input.HasPlayerAircraft)
         {
-            return Result(RuntimeReadinessState.Waiting, "WAITING - Start or resume a flight");
+            return input.RelativeThrottleMode
+                ? Result(RuntimeReadinessState.Waiting, "WAITING - Start or resume a flight")
+                : RelativeThrottleRequired();
         }
 
         if (!input.AirframeSupported)
@@ -126,7 +128,7 @@ internal static class RuntimeReadinessPolicy
 
         if (!input.RelativeThrottleMode)
         {
-            return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Enable Use Throttle Relative Axis");
+            return RelativeThrottleRequired();
         }
 
         if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)
@@ -200,6 +202,10 @@ internal static class RuntimeReadinessPolicy
             ? Result(RuntimeReadinessState.Likely, "Detected airbrake")
             : Result(RuntimeReadinessState.Likely, "Detected afterburner");
     }
+
+    // Players read this in the F1 menu, so it names the game menu that owns the toggle.
+    private static RuntimeReadinessResult RelativeThrottleRequired() =>
+        Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls");
 
     private static RuntimeReadinessResult Result(RuntimeReadinessState state, string displayText) =>
         new(state, displayText);

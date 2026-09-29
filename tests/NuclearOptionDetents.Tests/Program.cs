@@ -984,9 +984,12 @@ internal static class Program
 
     private static void ReadinessExcludesAbsoluteThrottle()
     {
-        var result = Readiness(relativeThrottleMode: false);
-        Equal(RuntimeReadinessState.NotApplicable, result.State);
-        Equal("NOT APPLICABLE - Enable Use Throttle Relative Axis", result.DisplayText);
+        foreach (var hasPlayerAircraft in new[] { true, false })
+        {
+            var result = Readiness(hasPlayerAircraft: hasPlayerAircraft, relativeThrottleMode: false);
+            Equal(RuntimeReadinessState.NotApplicable, result.State);
+            Equal("NOT APPLICABLE - Turn on Use Throttle Relative Axis in game Controls", result.DisplayText);
+        }
     }
 
     private static void ReadinessWaitsForPatchInstallation()

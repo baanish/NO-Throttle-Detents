@@ -22,6 +22,12 @@ Do not create an extra wrapper folder. After extraction, winhttp.dll,
 doorstop_config.ini, and the BepInEx folder must be directly beside
 NuclearOption.exe.
 
+REQUIRED GAME SETTING
+
+Turn on "Use Throttle Relative Axis" in the game's own Controls menu, beside
+Invert Pitch. It is off in a new install and is not in the F1 menu. While it
+is off, the throttle stays vanilla and the F1 status reads NOT APPLICABLE.
+
 DEFAULT BEHAVIOR
 
 At idle, keep holding decrease for 200 ms before the automatic airbrake can
@@ -29,8 +35,7 @@ open. At the aircraft's captured full-dry/afterburner boundary, keep holding
 increase for 200 ms before afterburner is allowed. Releasing early resets the
 hold. A small indicator shows active locks. Relative-throttle sensitivity is
 configurable on aircraft with a supported detent; use PauelsRandomFixes for
-other aircraft. Relative throttle mode is required; absolute/HOTAS mode remains vanilla
-in version @VERSION@. Auto Hover temporarily bypasses detents and sensitivity.
+other aircraft. Auto Hover temporarily bypasses detents and sensitivity.
 
 EXISTING BEPINEX INSTALLATION
 
