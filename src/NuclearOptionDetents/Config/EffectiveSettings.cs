@@ -15,15 +15,14 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         int idleHoldMilliseconds,
         bool afterburnerEnabled,
         int afterburnerHoldMilliseconds,
-        float commandThreshold,
         float endpointEpsilon,
         float resetHysteresis,
         CustomAirframeConfig customAirframe)
     {
         (Enabled, DebugLogging, IndicatorEnabled, ThrottleSensitivity, IdleEnabled, IdleHoldMilliseconds, AfterburnerEnabled,
-            AfterburnerHoldMilliseconds, CommandThreshold, EndpointEpsilon, ResetHysteresis, CustomAirframe) =
+            AfterburnerHoldMilliseconds, EndpointEpsilon, ResetHysteresis, CustomAirframe) =
             (enabled, debugLogging, indicatorEnabled, throttleSensitivity, idleEnabled, idleHoldMilliseconds, afterburnerEnabled,
-                afterburnerHoldMilliseconds, commandThreshold, endpointEpsilon, resetHysteresis, customAirframe);
+                afterburnerHoldMilliseconds, endpointEpsilon, resetHysteresis, customAirframe);
     }
 
     public bool Enabled { get; }
@@ -35,7 +34,6 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
     public int IdleHoldMilliseconds { get; }
     public bool AfterburnerEnabled { get; }
     public int AfterburnerHoldMilliseconds { get; }
-    public float CommandThreshold { get; }
     public float EndpointEpsilon { get; }
     public float ResetHysteresis { get; }
     public CustomAirframeConfig CustomAirframe { get; }
@@ -49,7 +47,6 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
         IdleHoldMilliseconds == other.IdleHoldMilliseconds &&
         AfterburnerEnabled == other.AfterburnerEnabled &&
         AfterburnerHoldMilliseconds == other.AfterburnerHoldMilliseconds &&
-        CommandThreshold.Equals(other.CommandThreshold) &&
         EndpointEpsilon.Equals(other.EndpointEpsilon) &&
         ResetHysteresis.Equals(other.ResetHysteresis) &&
         CustomAirframe.Equals(other.CustomAirframe);
@@ -68,7 +65,6 @@ internal readonly struct EffectiveSettings : IEquatable<EffectiveSettings>
             hash = (hash * 397) ^ IdleHoldMilliseconds;
             hash = (hash * 397) ^ (AfterburnerEnabled ? 1 : 0);
             hash = (hash * 397) ^ AfterburnerHoldMilliseconds;
-            hash = (hash * 397) ^ CommandThreshold.GetHashCode();
             hash = (hash * 397) ^ EndpointEpsilon.GetHashCode();
             hash = (hash * 397) ^ ResetHysteresis.GetHashCode();
             return (hash * 397) ^ CustomAirframe.GetHashCode();

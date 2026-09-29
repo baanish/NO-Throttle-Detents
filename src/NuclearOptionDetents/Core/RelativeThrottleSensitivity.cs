@@ -9,8 +9,6 @@ namespace NuclearOptionDetents.Core;
 /// </summary>
 public static class RelativeThrottleSensitivity
 {
-    // Vanilla ignores axis input below this magnitude; matching it keeps a resting stick vanilla.
-    private const double VanillaInputDeadzone = 0.1;
     // Slack for the float accumulator round-tripping through double arithmetic.
     private const double ObservationTolerance = 0.0001;
 
@@ -55,7 +53,7 @@ public static class RelativeThrottleSensitivity
             return observedSimulatedThrottle;
         }
 
-        if (Math.Abs(rawThrottle) <= VanillaInputDeadzone)
+        if (Math.Abs(rawThrottle) <= ThrottleCommands.VanillaInputDeadzone)
         {
             return observedSimulatedThrottle;
         }

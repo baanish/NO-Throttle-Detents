@@ -115,15 +115,6 @@ internal sealed class ModConfig
                 90,
                 new AcceptableValueRange<int>(0, 2000)));
         _customAircraftProfiles = new CustomAircraftProfiles(config);
-        CommandThreshold = config.Bind(
-            AdvancedSection,
-            "CommandThreshold",
-            0.5f,
-            Describe(
-                "Minimum raw input counted as a hold; 1.0 requires full-scale input.",
-                "Command Threshold",
-                100,
-                new AcceptableValueRange<float>(0.1f, 1f)));
         EndpointEpsilon = config.Bind(
             AdvancedSection,
             "EndpointEpsilon",
@@ -156,7 +147,6 @@ internal sealed class ModConfig
     public ConfigEntry<int> IdleHoldMilliseconds { get; }
     public ConfigEntry<bool> AfterburnerEnabled { get; }
     public ConfigEntry<int> AfterburnerHoldMilliseconds { get; }
-    public ConfigEntry<float> CommandThreshold { get; }
     public ConfigEntry<float> EndpointEpsilon { get; }
     public ConfigEntry<float> ResetHysteresis { get; }
 
@@ -211,7 +201,6 @@ internal sealed class ModConfig
             Clamp(IdleHoldMilliseconds.Value, 0, 2000),
             AfterburnerEnabled.Value,
             Clamp(AfterburnerHoldMilliseconds.Value, 0, 2000),
-            Clamp(CommandThreshold.Value, 0.1f, 1f),
             epsilon,
             hysteresis,
             _customAircraftProfiles.Read(aircraftId));

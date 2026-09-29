@@ -299,10 +299,7 @@ internal static class RuntimeController
             var reverseDirection = collective && PlayerSettings.invertCollective;
             var controlsEnabled = GameManager.flightControlsEnabled;
             var paused = Time.timeScale <= 0f;
-            var command = ThrottleCommands.FromRawAxis(
-                rawThrottle,
-                settings.CommandThreshold,
-                reverseDirection);
+            var command = ThrottleCommands.FromRawAxis(rawThrottle, reverseDirection);
             var simulatedThrottleBefore = simulatedThrottleAccessor(state);
             var simulatedThrottleRange = externalUsesSignedMapping || PlayerSettings.throttleUseNegative
                 ? SimulatedThrottleRange.NegativeOneToOne
