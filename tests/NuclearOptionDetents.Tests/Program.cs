@@ -1350,12 +1350,14 @@ internal static class Program
         True(runtime.Update(InteriorInput(0.319, 0.69, ThrottleCommand.Increase)).IsHeld);
         False(runtime.Update(InteriorInput(0.32, 0.69, ThrottleCommand.Increase)).IsHeld);
 
-        var gap = new InteriorDetentRuntime(new[] { 0.67 }, 0, 1, 200, 0.001, 0.02);
-        gap.Update(InteriorInput(0, 0.65, ThrottleCommand.Neutral));
-        gap.Update(InteriorInput(0.01, 0.69, ThrottleCommand.Increase));
-        var afterGap = gap.Update(InteriorInput(0.21, 0.69, ThrottleCommand.Increase));
-        True(afterGap.IsHeld);
-        Near(0, afterGap.ElapsedHoldSeconds);
+        // Slow frames still count toward the dwell, as endpoint detents do.
+        var slow = new InteriorDetentRuntime(new[] { 0.67 }, 0, 1, 200, 0.001, 0.02);
+        slow.Update(InteriorInput(0, 0.65, ThrottleCommand.Neutral));
+        slow.Update(InteriorInput(0.01, 0.69, ThrottleCommand.Increase));
+        var afterSlowFrame = slow.Update(InteriorInput(0.135, 0.69, ThrottleCommand.Increase));
+        True(afterSlowFrame.IsHeld);
+        Near(0.125, afterSlowFrame.ElapsedHoldSeconds);
+        False(slow.Update(InteriorInput(0.26, 0.69, ThrottleCommand.Increase)).IsHeld);
     }
 
     private static void CancelledInteriorDetentReversesFreely()
