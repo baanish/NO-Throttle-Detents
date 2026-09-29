@@ -77,6 +77,8 @@ internal static class Program
             ("interior detent follows the cockpit percentage range", InteriorDetentFollowsCockpitPercentageRange),
             ("interior detent does not snap and catches the first crossing", InteriorDetentDoesNotSnapAndCatchesFirstCrossing),
             ("nearby interior detents unlock independently", NearbyInteriorDetentsUnlockIndependently),
+            ("released interior detent catches the next stop", ReleasedInteriorDetentCatchesNextStop),
+            ("interior detent parks inside the dry range", InteriorDetentParksInsideDryRange),
             ("interior detent requires a continuous hold", InteriorDetentRequiresContinuousHold),
             ("cancelled interior detent reverses freely", CancelledInteriorDetentReversesFreely),
             ("repeated neutral preserves interior approach side", RepeatedNeutralPreservesInteriorApproachSide),
@@ -1422,6 +1424,40 @@ internal static class Program
         var second = runtime.Update(InteriorInput(0.03, 0.69, ThrottleCommand.Increase));
         True(second.IsHeld);
         Near(68, second.DryPercent);
+    }
+
+    private static void ReleasedInteriorDetentCatchesNextStop()
+    {
+        var upward = new InteriorDetentRuntime(new[] { 0.50, 0.51 }, 0, 1, 10, 0.001, 0.02);
+        upward.Update(InteriorInput(0, 0.49, ThrottleCommand.Neutral));
+        True(upward.Update(InteriorInput(0.0167, 0.506667, ThrottleCommand.Increase)).IsHeld);
+        var nextUp = upward.Update(InteriorInput(0.0334, 0.516567, ThrottleCommand.Increase));
+        True(nextUp.IsHeld);
+        Near(51, nextUp.DryPercent);
+        Near(0.51 - ThrottleBoundaryHold.InwardOffset, nextUp.EffectiveThrottle);
+
+        var downward = new InteriorDetentRuntime(new[] { 0.50, 0.51 }, 0, 1, 10, 0.001, 0.02);
+        downward.Update(InteriorInput(0, 0.52, ThrottleCommand.Neutral));
+        True(downward.Update(InteriorInput(0.0167, 0.503333, ThrottleCommand.Decrease)).IsHeld);
+        var nextDown = downward.Update(InteriorInput(0.0334, 0.493433, ThrottleCommand.Decrease));
+        True(nextDown.IsHeld);
+        Near(50, nextDown.DryPercent);
+        Near(0.50 + ThrottleBoundaryHold.InwardOffset, nextDown.EffectiveThrottle);
+    }
+
+    private static void InteriorDetentParksInsideDryRange()
+    {
+        var nearAfterburner = new InteriorDetentRuntime(new[] { 0.99995 }, 0, 0.9, 200, 0.001, 0.02);
+        nearAfterburner.Update(InteriorInput(0, 0.905, ThrottleCommand.Neutral));
+        var belowBurner = nearAfterburner.Update(InteriorInput(0.01, 0.88, ThrottleCommand.Decrease));
+        True(belowBurner.IsHeld);
+        True(belowBurner.EffectiveThrottle < 0.9);
+
+        var nearIdle = new InteriorDetentRuntime(new[] { 0.00005 }, 0.05, 0.95, 200, 0.001, 0.02);
+        nearIdle.Update(InteriorInput(0, 0.04, ThrottleCommand.Neutral));
+        var aboveIdle = nearIdle.Update(InteriorInput(0.01, 0.06, ThrottleCommand.Increase));
+        True(aboveIdle.IsHeld);
+        True(aboveIdle.EffectiveThrottle > 0.05);
     }
 
     private static void InteriorDetentInterruptionClearsCrossingHistory()
