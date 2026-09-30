@@ -12,13 +12,10 @@ BepInEx\config\com.baanish.nuclearoption.detents.cfg on first launch.
 Launch the game, then check that BepInEx\LogOutput.log contains
 "Nuclear Option Detents @VERSION@ loaded."
 
-ANALOG THROTTLE SETTING
+SUPPORTED CONTROLS
 
-Keyboard and button throttles work with any game setting. An analog throttle
-axis (HOTAS lever, slider) needs "Use Throttle Relative Axis" on in the game's
-own Controls menu, beside Invert Pitch, not the F1 menu. It is off in a new
-install. While it is off, an analog axis stays vanilla and the F1 status reads
-NOT APPLICABLE.
+Keyboard and button throttles, with any game setting. Analog throttle axes
+(HOTAS levers, sliders, sticks) are not supported and stay vanilla.
 
 Settings, supported aircraft, and known limits:
 https://github.com/baanish/NO-Throttle-Detents

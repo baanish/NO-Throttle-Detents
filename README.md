@@ -2,10 +2,9 @@
 
 A client-side BepInEx 5 mod for the Windows Steam version of Nuclear Option.
 It stops you from opening the airbrake or lighting the afterburner by accident
-when you fly with the keyboard or a relative throttle.
+when you fly with the keyboard.
 
-With a keyboard or relative throttle, the ends of the range are also
-switches. Reaching 0% opens the automatic airbrake, and pushing past full dry
+With a keyboard throttle, the ends of the range are also switches. Reaching 0% opens the automatic airbrake, and pushing past full dry
 thrust engages the afterburner. The throttle keeps sliding while you hold the key, so letting go
 a moment too late deploys the airbrake on final or lights the burner when you
 wanted full military power.
@@ -23,10 +22,11 @@ hold times are adjustable, and either detent can be turned off.
 
 ![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
 
-The mod changes only the local player's throttle input. It never turns the
-afterburner on by itself. An analog throttle axis in absolute mode,
-helicopters and other collective aircraft, AI, and other players' aircraft
-stay vanilla.
+The mod changes only the local player's keyboard or button throttle input, with
+the game's Use Throttle Relative Axis setting on or off. It never turns the
+afterburner on by itself. Analog throttle axes (HOTAS levers, sliders, and
+sticks) are not supported and stay vanilla, as do helicopters and other
+collective aircraft, AI, and other players' aircraft.
 
 ## Install
 
@@ -44,21 +44,6 @@ BepInEx 6 does not load this mod.
 
 Launch the game. `BepInEx\LogOutput.log` should contain
 `Nuclear Option Detents <version> loaded.`
-
-## Analog throttle axis: turn on relative throttle
-
-Keyboard and button throttles get detents with the game's **Use Throttle
-Relative Axis** toggle on or off. An analog throttle axis (HOTAS lever,
-slider) needs it on. With it off, the axis stays vanilla so the mod never
-fights a physical lever. The toggle is in the game's own Controls menu, beside
-Invert Pitch and the sensitivity sliders, not in the F1 Configuration Manager.
-It is off in a new install, and the game's controls reset turns it off again.
-
-When an analog axis moves the throttle with the toggle off, the mod's
-`RuntimeStatus` line in the F1 menu reads
-`NOT APPLICABLE - Analog throttle needs Use Throttle Relative Axis in game Controls`.
-While the mod is off or still starting, or in an unsupported or collective
-aircraft, the status names that reason instead.
 
 The F1 menu comes from
 [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager),
@@ -109,14 +94,14 @@ BepInEx creates the file on first launch if the package did not include it.
 | General | `DebugLogging` | `false` | | Logs aircraft attach and reset events to `BepInEx\LogOutput.log`. |
 | General | `NetworkValidation`, `NetworkValidationOwner` | `false`, `-1` | owner -1 to 255 | Multiplayer diagnostic, off for normal play. See [docs/NETWORK-VALIDATION.md](docs/NETWORK-VALIDATION.md). |
 | Indicator | `Enabled` | `true` | | Shows the hold below the HUD throttle gauge while a detent stops the throttle. |
-| Throttle Sensitivity | `Multiplier` | `1` | 0.25 to 4 | Scales relative-throttle speed on aircraft with a detent. Other aircraft keep the game's rate. |
+| Throttle Sensitivity | `Multiplier` | `1` | 0.25 to 4 | Scales keyboard throttle speed on aircraft with a detent. Other aircraft keep the game's rate. |
 | Idle / Airbrake Detent | `Enabled`, `HoldMilliseconds` | `true`, `200` | 0 to 2000 ms | The idle detent and its hold time. 0 lets the throttle through on the first push. |
 | Full Dry / Afterburner Detent | `Enabled`, `HoldMilliseconds` | `true`, `200` | 0 to 2000 ms | The afterburner detent and its hold time. |
 | Advanced | `EndpointEpsilon` | `0.001` | 0.00001 to 0.05 | How close to a boundary the throttle must be to start a hold. |
 | Advanced | `ResetHysteresis` | `0.02` | 0.001 to 0.10 | How far the throttle must move back before a passed detent locks again. Never less than `EndpointEpsilon`. |
 
-Any throttle input that moves the throttle counts as holding, whether it
-comes from a key or an analog axis.
+While an analog axis drives the throttle, the mod's `RuntimeStatus` line in
+the F1 menu reads `NOT APPLICABLE - Analog throttle axis not supported`.
 
 Auto Hover bypasses the detents and the sensitivity multiplier while it is on.
 

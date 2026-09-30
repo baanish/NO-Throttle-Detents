@@ -13,7 +13,7 @@ Two smaller patches support that one. A postfix on `PlayerControls()` cancels
 a pending hold on frames where the throttle method did not run, and a prefix
 on `LeaveState()` resets everything when the pilot leaves the seat.
 
-## A detent needs the local pilot, a matched aircraft, and a ramping throttle
+## A detent needs the local pilot, a matched aircraft, and a key or button throttle
 
 The runtime writes nothing unless all of these hold:
 
@@ -23,11 +23,11 @@ The runtime writes nothing unless all of these hold:
   exact ID.
 - Live components confirm the capability the detent protects (see
   [capability discovery](#capability-discovery-confirms-parts-at-seat-entry)).
-- The throttle ramps rather than tracking a lever: the game's relative
-  throttle mode is on, or the last input on the Throttle action came from a
-  key or button (Rewired `GetCurrentInputSources`). The game ramps digital
-  input the same way in either mode; an analog axis in absolute mode sets the
-  throttle directly, and pinning it would fight the lever.
+- The last input on the Throttle action came from a key or button (Rewired
+  `GetCurrentInputSources`). The game ramps digital input the same way whether
+  or not Use Throttle Relative Axis is on, so that setting does not matter.
+  Analog throttle axes are not supported: in absolute mode the game sets the
+  throttle straight from the lever, and pinning it would fight the lever.
 - The aircraft is not collective.
 - Auto Hover is off, and no other mod is publishing the throttle.
 
@@ -100,7 +100,7 @@ stays vanilla for the rest of the seat.
 
 ## Sensitivity rescales the game's own step
 
-The multiplier recomputes the game's relative-throttle step with a scaled
+The multiplier recomputes the game's keyboard throttle step with a scaled
 `deltaTime` before the detents see the value. It runs only on aircraft with a
 live detent, endpoint or custom. It first checks that the accumulator moved
 by the step vanilla should have taken, and leaves the frame alone if not.
@@ -145,7 +145,7 @@ reports unavailable and its vanilla path runs unchanged. The load line in
 resets the detent state and is logged once per operation.
 
 Debug logging records aircraft attachment, capability scans, lifecycle resets,
-and changes to the relative-throttle setting or the throttle input device. Network Validation records
+and changes to the throttle input device. Network Validation records
 session player indexes, not player names or platform IDs. The plugin has no
 telemetry, network access, or self-update. BepInEx writes the config and log.
 

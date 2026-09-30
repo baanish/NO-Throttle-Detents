@@ -42,7 +42,6 @@ targets, run `pwsh ./build/Build.ps1`, and flight-check the mod.
 - JetNozzle afterburners field: `JetNozzle/Afterburner[] JetNozzle::afterburners`
 - Afterburner throttle range fields: `System.Single JetNozzle/Afterburner::throttleStart`, `System.Single JetNozzle/Afterburner::throttleEnd`
 - GameManager flight-controls field: `System.Boolean GameManager::flightControlsEnabled`
-- PlayerSettings relative-throttle field: `System.Boolean PlayerSettings::throttleUseRelative`
 - PlayerSettings invert-collective field: `System.Boolean PlayerSettings::invertCollective`
 - PlayerSettings throttle-negative field: `System.Boolean PlayerSettings::throttleUseNegative`
 - Flight HUD center: `UnityEngine.Transform FlightHud::GetHUDCenter()`
