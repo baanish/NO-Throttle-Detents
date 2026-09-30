@@ -67,6 +67,8 @@ internal sealed class InteriorDetentRuntime
     private readonly double[] _boundaries;
     private readonly double[] _dryPercents;
     private readonly bool[] _unlocked;
+    private readonly double _displayStart;
+    private readonly double _displayEnd;
     private readonly double _holdDurationSeconds;
     private double _crossingEpsilon;
     private double _resetHysteresis;
@@ -94,6 +96,8 @@ internal sealed class InteriorDetentRuntime
             (displayStart, displayEnd) = (displayEnd, displayStart);
         }
 
+        _displayStart = displayStart;
+        _displayEnd = displayEnd;
         _holdDurationSeconds = Math.Max(0, holdMilliseconds) / 1000.0;
         _crossingEpsilon = Math.Max(0, crossingEpsilon);
         _resetHysteresis = Math.Max(_crossingEpsilon, resetHysteresis);
@@ -145,6 +149,8 @@ internal sealed class InteriorDetentRuntime
 
         if (_holding)
         {
+            // A stop released to start this chained hold rearms once the parked throttle clears it.
+            RelockClearedBoundaries(_lastThrottle);
             if (!ThrottleCommands.IsDirection(input.Command, _activeDirection))
             {
                 var cancelledIndex = _activeIndex;
@@ -169,18 +175,21 @@ internal sealed class InteriorDetentRuntime
                 _elapsedSeconds += delta;
             }
 
-            if (_elapsedSeconds + 1e-12 >= _holdDurationSeconds)
+            if (_elapsedSeconds + 1e-12 < _holdDurationSeconds)
             {
-                _unlocked[_activeIndex] = true;
-                CancelHold();
-                Remember(requested);
-                return PassThrough(input, requested);
+                return HoldAtActiveBoundary(input);
             }
 
-            return HoldAtActiveBoundary(input);
+            // Check the rest of this request from the parked value so a jump past the next stop still holds
+            // there; no relock yet, or the stop just released could catch again.
+            _unlocked[_activeIndex] = true;
+            CancelHold();
+        }
+        else
+        {
+            RelockClearedBoundaries(requested);
         }
 
-        RelockClearedBoundaries(requested);
         var crossedIndex = FindCrossedBoundary(_lastThrottle, requested, input.Command);
         if (crossedIndex < 0)
         {
@@ -268,13 +277,20 @@ internal sealed class InteriorDetentRuntime
         }
     }
 
+    /// <summary>
+    /// Parks one offset past the boundary on the approach side, but never outside the dry range: endpoint
+    /// gating is suspended during this hold, so a park past either end would publish afterburner or
+    /// airbrake the player never commanded.
+    /// </summary>
     private InteriorDetentSnapshot HoldAtActiveBoundary(in InteriorDetentInput input)
     {
         var boundary = _boundaries[_activeIndex];
-        var parked = SimulatedThrottleMapping.ClampPublic(
-            _activeDirection == DetentDirection.Upper
-                ? boundary - ThrottleBoundaryHold.InwardOffset
-                : boundary + ThrottleBoundaryHold.InwardOffset);
+        var approachSide = _activeDirection == DetentDirection.Upper
+            ? boundary - ThrottleBoundaryHold.InwardOffset
+            : boundary + ThrottleBoundaryHold.InwardOffset;
+        var parked = SimulatedThrottleMapping.ClampPublic(Math.Max(
+            _displayStart + ThrottleBoundaryHold.InwardOffset,
+            Math.Min(_displayEnd - ThrottleBoundaryHold.InwardOffset, approachSide)));
         Remember(parked);
         return new InteriorDetentSnapshot(
             isHeld: true,
