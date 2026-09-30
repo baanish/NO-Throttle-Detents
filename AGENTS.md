@@ -18,7 +18,8 @@ add infrastructure to make a prototype look production-ready.
 2. Run `pwsh ./build/Build.ps1` for the focused tests, Release build, and
    package validation. Pass `-GameDir 'C:\path\to\Nuclear Option'` when the
    game is not discoverable, or set `NUCLEAR_OPTION_DIR` for the same override.
-3. Flight-test behavior changes in the installed game. Record what was tested,
+3. Flight-test behavior changes in the installed game; `-Install` copies the
+   built plugin into the game, waiting for the game to close. Record what was tested,
    with the game build and aircraft, in the release's changelog entry.
 4. For NOMM version updates, publish a GitHub release with the flat `-nomm.zip`
    as its first asset. Verify the published asset order and SHA-256.

@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param([string]$GameDir)
+param(
+    [string]$GameDir,
+    # Copy the built plugin into the game's BepInEx plugin folder, waiting for the game to close first.
+    [switch]$Install
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -140,4 +144,23 @@ if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
 Write-Host 'Build complete.'
 Get-ChildItem $dist -Filter '*.zip' | ForEach-Object {
     Write-Host "$($_.Name)  $((Get-FileHash $_.FullName -Algorithm SHA256).Hash)"
+}
+
+if ($Install) {
+    # NOMM disables a mod by moving its folder to disabledPlugins; reinstall wherever it is now.
+    $target = Join-Path $resolvedGame 'BepInEx\plugins\NuclearOptionDetents'
+    $disabled = Join-Path $resolvedGame 'BepInEx\disabledPlugins\NuclearOptionDetents'
+    if (-not (Test-Path $target) -and (Test-Path $disabled)) { $target = $disabled }
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    $installed = Join-Path $target 'NuclearOptionDetents.dll'
+    # The running game locks the DLL, and an identical build needs no copy.
+    if (-not (Test-Path $installed -PathType Leaf) -or (Get-FileHash $installed).Hash -ne (Get-FileHash $pluginDll).Hash) {
+        $gameProcess = Get-Process -Name NuclearOption -ErrorAction SilentlyContinue
+        if ($gameProcess) {
+            Write-Host 'Waiting for Nuclear Option to close before installing...'
+            $gameProcess | Wait-Process
+        }
+        Copy-Item $pluginDll $target -Force
+    }
+    Write-Host "Installed $pluginDll to $target"
 }
