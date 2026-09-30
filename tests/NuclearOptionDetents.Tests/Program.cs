@@ -53,7 +53,7 @@ internal static class Program
             ("runtime snapshot governs idle flow", RuntimeSnapshotGovernsIdleFlow),
             ("runtime snapshot governs afterburner flow", RuntimeSnapshotGovernsAfterburnerFlow),
             ("readiness reports disabled mod", ReadinessReportsDisabledMod),
-            ("readiness excludes absolute throttle", ReadinessExcludesAbsoluteThrottle),
+            ("readiness excludes analog throttle", ReadinessExcludesAnalogThrottle),
             ("readiness waits for patch installation", ReadinessWaitsForPatchInstallation),
             ("readiness reports observer failure", ReadinessReportsObserverFailure),
             ("readiness reports one failed detent", ReadinessReportsOneFailedDetent),
@@ -982,11 +982,11 @@ internal static class Program
         Equal("OFF - Mod disabled", result.DisplayText);
     }
 
-    private static void ReadinessExcludesAbsoluteThrottle()
+    private static void ReadinessExcludesAnalogThrottle()
     {
-        var result = Readiness(relativeThrottleMode: false);
+        var result = Readiness(analogThrottle: true);
         Equal(RuntimeReadinessState.NotApplicable, result.State);
-        Equal("NOT APPLICABLE - Enable Use Throttle Relative Axis", result.DisplayText);
+        Equal("NOT APPLICABLE - Analog throttle axis not supported", result.DisplayText);
     }
 
     private static void ReadinessWaitsForPatchInstallation()
@@ -1033,14 +1033,14 @@ internal static class Program
 
     private static void ReadinessNamesUnsupportedBeforeThrottleMode()
     {
-        var result = Readiness(airframeSupported: false, relativeThrottleMode: false);
+        var result = Readiness(airframeSupported: false, analogThrottle: true);
         Equal(RuntimeReadinessState.Unsupported, result.State);
         Equal("UNSUPPORTED - Not in preset", result.DisplayText);
     }
 
     private static void ReadinessNamesCollectiveBeforeThrottleMode()
     {
-        var result = Readiness(isCollective: true, relativeThrottleMode: false);
+        var result = Readiness(isCollective: true, analogThrottle: true);
         Equal(RuntimeReadinessState.NotApplicable, result.State);
         Equal("NOT APPLICABLE - Collective aircraft", result.DisplayText);
     }
@@ -1530,7 +1530,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            analogThrottle: false,
             aircraftCapabilitiesKnown: false,
             hasAirbrake: false,
             hasAfterburner: false,
@@ -1550,7 +1550,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            analogThrottle: false,
             aircraftCapabilitiesKnown: true,
             hasAirbrake: true,
             hasAfterburner: false,
@@ -1570,7 +1570,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            analogThrottle: false,
             aircraftCapabilitiesKnown: false,
             hasAirbrake: false,
             hasAfterburner: false,
@@ -1835,7 +1835,7 @@ internal static class Program
         bool hasPlayerAircraft = true,
         bool airframeSupported = true,
         bool isCollective = false,
-        bool relativeThrottleMode = true,
+        bool analogThrottle = false,
         bool aircraftCapabilitiesKnown = true,
         bool hasAirbrake = true,
         bool hasAfterburner = true) =>
@@ -1850,7 +1850,7 @@ internal static class Program
             hasPlayerAircraft,
             airframeSupported,
             isCollective,
-            relativeThrottleMode,
+            analogThrottle,
             aircraftCapabilitiesKnown,
             hasAirbrake,
             hasAfterburner));

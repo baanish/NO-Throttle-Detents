@@ -198,7 +198,6 @@ internal static class RuntimeCompatibility
             RequireDirectField(typeof(ControlInputs), "throttle", typeof(float), isStatic: false);
         }
 
-        RequireDirectField(typeof(PlayerSettings), "throttleUseRelative", typeof(bool), isStatic: true);
         RequireDirectField(typeof(PlayerSettings), "invertCollective", typeof(bool), isStatic: true);
         RequireDirectField(typeof(GameManager), "flightControlsEnabled", typeof(bool), isStatic: true);
         if (readsNegativeThrottle)

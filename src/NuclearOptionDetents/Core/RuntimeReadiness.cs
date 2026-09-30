@@ -25,7 +25,7 @@ internal readonly struct RuntimeReadinessInput
         bool hasPlayerAircraft,
         bool airframeSupported,
         bool isCollective,
-        bool relativeThrottleMode,
+        bool analogThrottle,
         bool aircraftCapabilitiesKnown,
         bool hasAirbrake,
         bool hasAfterburner,
@@ -34,12 +34,12 @@ internal readonly struct RuntimeReadinessInput
     {
         (MasterEnabled, IdleEnabled, AfterburnerEnabled, PatchStatusKnown,
             ThrottleObserverActive, IdleGateActive, AfterburnerGateActive,
-            HasPlayerAircraft, AirframeSupported, IsCollective, RelativeThrottleMode,
+            HasPlayerAircraft, AirframeSupported, IsCollective, AnalogThrottle,
             AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled,
             InteriorDetentsConfigured) =
             (masterEnabled, idleEnabled, afterburnerEnabled, patchStatusKnown,
                 throttleObserverActive, idleGateActive, afterburnerGateActive,
-                hasPlayerAircraft, airframeSupported, isCollective, relativeThrottleMode,
+                hasPlayerAircraft, airframeSupported, isCollective, analogThrottle,
                 aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled,
                 interiorDetentsConfigured);
     }
@@ -54,7 +54,7 @@ internal readonly struct RuntimeReadinessInput
     public bool HasPlayerAircraft { get; }
     public bool AirframeSupported { get; }
     public bool IsCollective { get; }
-    public bool RelativeThrottleMode { get; }
+    public bool AnalogThrottle { get; }
     public bool AircraftCapabilitiesKnown { get; }
     public bool HasAirbrake { get; }
     public bool HasAfterburner { get; }
@@ -124,9 +124,9 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Collective aircraft");
         }
 
-        if (!input.RelativeThrottleMode)
+        if (input.AnalogThrottle)
         {
-            return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Enable Use Throttle Relative Axis");
+            return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Analog throttle axis not supported");
         }
 
         if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)
