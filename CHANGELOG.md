@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+- Runs detents for keyboard and button throttles with the game's `Use Throttle Relative Axis` setting on or off. The game ships that setting off, and players could not find it.
+- Drops analog throttle axes (HOTAS levers, sliders, sticks): they stay vanilla, and the F1 status reads `NOT APPLICABLE - Analog throttle axis not supported`. Until the first throttle key press of a flight, it reads `WAITING - Press a throttle key`.
+- Removes the `CommandThreshold` setting, which has no effect on keys. Existing config files keep an unused key.
+- Custom detents release at low frame rates; a slow frame no longer restarts the hold.
+- Releasing a custom detent no longer skips a second stop right behind it, a stop released into a chained hold rearms, and a custom stop at the edge of the dry range can no longer park the throttle in afterburner or at idle.
+- The Network Validation analyzer uses the F-22E's `0.95` nozzle start, standalone package validation requires the BepInEx loader files, the first build on a machine without the pinned .NET SDK no longer fails, and `Build.ps1 -Install` installs a test build once the game closes.
+- Rewrites the README, docs, and packaged READMEs.
+- A user flight check on Nuclear Option 0.34.2, Steam build 24724372, flew the KR-67 Ifrit with a keyboard throttle and `Use Throttle Relative Axis` off on a combined build of these changes, and found no problems. The log confirmed keyboard input detection and no exceptions. The release adds only the waiting status and the `CommandThreshold` removal on top of that build. The custom-detent fixes are covered by automated tests, not flight. Multiplayer behavior remains unverified.
+
 ## 0.4.3
 
 - Adds an explicit preset for Aryx's F-22E Strike Raptor 1.0.0, with component airbrakes and two afterburner nozzles at `0.95..1.0`.
