@@ -88,12 +88,17 @@ function Get-BepInEx {
     $uri = "https://github.com/BepInEx/BepInEx/releases/download/v$bepVersion/$bepAsset"
     [void](Get-VerifiedDownload $uri $archive $bepSha256)
     $rootPath = Join-Path $folder 'extracted'
-    $core = Join-Path $rootPath 'BepInEx\core\BepInEx.dll'
-    if (-not (Test-Path $core -PathType Leaf)) {
+    # The loader files Validate-Packages.ps1 requires in the standalone package.
+    $loaderFiles = @('.doorstop_version', 'doorstop_config.ini', 'winhttp.dll') + @(
+        'BepInEx.Preloader', 'BepInEx', '0Harmony', 'HarmonyXInterop', 'Mono.Cecil', 'MonoMod.RuntimeDetour', 'MonoMod.Utils' |
+            ForEach-Object { "BepInEx\core\$_.dll" })
+    $missing = @($loaderFiles | Where-Object { -not (Test-Path (Join-Path $rootPath $_) -PathType Leaf) })
+    if ($missing) {
         if (Test-Path $rootPath) { Remove-Item $rootPath -Recurse -Force }
         Expand-Archive $archive $rootPath -Force
+        $missing = @($loaderFiles | Where-Object { -not (Test-Path (Join-Path $rootPath $_) -PathType Leaf) })
+        if ($missing) { throw "Pinned BepInEx archive is missing: $($missing -join ', ')." }
     }
-    if (-not (Test-Path $core -PathType Leaf)) { throw 'Pinned BepInEx archive did not contain BepInEx.dll.' }
     return $rootPath
 }
 
