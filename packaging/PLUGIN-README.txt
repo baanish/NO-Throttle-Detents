@@ -23,8 +23,8 @@ existing settings. Text edits apply on the next launch.
 To uninstall only this mod, delete BepInEx\plugins\NuclearOptionDetents. You may
 also delete BepInEx\config\com.baanish.nuclearoption.detents.cfg.
 
-Version @VERSION@ applies detents only to relative throttle mode. Absolute/HOTAS,
-collective, unsupported aircraft, and absent aircraft systems remain vanilla.
+Version @VERSION@ applies detents to keyboard and button throttles, with any
+game setting. Analog throttle axes (HOTAS) are not supported. They, collective, unsupported aircraft, and absent aircraft systems remain vanilla.
 The patched throttle route belongs to the local pilot, and the runtime checks
 the game-local aircraft before applying a detent. Auto Hover bypasses detents
 and sensitivity until it is turned off. AB-4's upper detent requires all four

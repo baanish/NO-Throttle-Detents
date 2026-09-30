@@ -27,10 +27,10 @@ DEFAULT BEHAVIOR
 At idle, keep holding decrease for 200 ms before the automatic airbrake can
 open. At the aircraft's captured full-dry/afterburner boundary, keep holding
 increase for 200 ms before afterburner is allowed. Releasing early resets the
-hold. A small indicator shows active locks. Relative-throttle sensitivity is
+hold. A small indicator shows active locks. Keyboard throttle sensitivity is
 configurable on aircraft with a supported detent; use PauelsRandomFixes for
-other aircraft. Relative throttle mode is required; absolute/HOTAS mode remains vanilla
-in version @VERSION@. Auto Hover temporarily bypasses detents and sensitivity.
+other aircraft. Keyboard and button throttles work with any game setting;
+analog throttle axes (HOTAS) are not supported and stay vanilla. Auto Hover temporarily bypasses detents and sensitivity.
 
 EXISTING BEPINEX INSTALLATION
 

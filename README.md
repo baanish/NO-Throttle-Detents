@@ -4,12 +4,11 @@ A small client-side BepInEx 5 mod for the Windows Steam version of Nuclear
 Option that stops you from opening the airbrake or lighting the afterburner
 by accident.
 
-With relative throttle controls (the default keyboard throttle), the ends of
-the throttle range are also switches: reaching 0% opens the automatic
-airbrake, and pushing past full dry thrust engages the afterburner. The
-throttle slides while the key is held, so releasing a millisecond too late
-deploys the airbrake on final or lights the burner when you wanted full
-military power.
+With a keyboard throttle, the ends of the throttle range are also switches:
+reaching 0% opens the automatic airbrake, and pushing past full dry thrust
+engages the afterburner. The throttle slides while the key is held, so
+releasing a millisecond too late deploys the airbrake on final or lights the
+burner when you wanted full military power.
 
 This mod adds a detent at each end, like the physical stop on a real HOTAS
 throttle. The throttle catches at the boundary instead of sliding straight
@@ -26,12 +25,13 @@ until you move away from that end again. Both hold times are configurable
 
 ![Afterburner detent hold shown on the flight HUD](docs/screenshots/hud-afterburner-hold.png)
 
-The mod only touches the local player's relative-throttle input. It
+The mod only touches the local player's keyboard or button throttle input.
+It works with the game's Use Throttle Relative Axis setting on or off. It
 recognizes 20 aircraft and activates detents on 15 (listed in
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md)). It never turns the
-afterburner on by itself. Absolute/HOTAS throttle mode, helicopters, AI, and
-remote aircraft are untouched, as are weapons and
-networking. Multiplayer use is unverified, and hosts or server moderators may
+afterburner on by itself. Analog throttle axes (HOTAS levers, sliders, and
+sticks) are not supported and stay vanilla. Helicopters, AI, remote aircraft,
+weapons, and networking are untouched. Multiplayer use is unverified, and hosts or server moderators may
 prohibit BepInEx or this mod.
 
 The Aircraft Profile menu lists every aircraft in the game's installed
@@ -123,7 +123,7 @@ ResetHysteresis = 0.02
 Each detent has its own switch and dwell from 0 to 2000 ms. A zero dwell
 unlocks on the first qualifying endpoint update. The HUD indicator appears
 below the throttle gauge only while a detent is blocking movement. `Multiplier`
-scales relative-throttle movement from 0.25x to 4x on aircraft with a supported
+scales keyboard throttle movement from 0.25x to 4x on aircraft with a supported
 detent; 1x preserves the game rate. Other aircraft keep vanilla sensitivity.
 `CommandThreshold` is the
 raw input magnitude required to hold; `1.0` requires full-scale input.

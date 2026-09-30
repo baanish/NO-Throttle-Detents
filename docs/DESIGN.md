@@ -2,15 +2,20 @@
 
 ## Scope
 
-Nuclear Option Detents observes the local player's existing relative-throttle
-input after vanilla processing. While a detent is locked or holding, the
+Nuclear Option Detents observes the local player's existing keyboard or button
+throttle input after vanilla processing. While a detent is locked or holding, the
 runtime parks the public throttle just inside the changeover: a tiny positive
 value above idle or just below the preset full-dry boundary. It also keeps the
 game's private simulated-throttle value at that parked point so input cannot
 build up behind the stop. Once the dwell unlocks, vanilla throttle flow
 resumes.
 
-Absolute/HOTAS mode and collective aircraft are pass-through paths. Unknown
+Analog throttle axes and collective aircraft are pass-through paths. The game
+ramps a key or button throttle the same way whether or not Use Throttle
+Relative Axis is on, so the runtime follows the device driving the Throttle
+action (Rewired `GetCurrentInputSources`) instead of that setting. An analog
+axis in absolute mode sets the throttle directly, and pinning it would fight
+the lever. Unknown
 aircraft and capabilities marked absent in the explicit preset table are also
 vanilla unless the user enables an exact-ID custom profile. The throttle
 observer requires the game to identify the selected aircraft as local before

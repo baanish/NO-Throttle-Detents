@@ -53,7 +53,8 @@ internal static class Program
             ("runtime snapshot governs idle flow", RuntimeSnapshotGovernsIdleFlow),
             ("runtime snapshot governs afterburner flow", RuntimeSnapshotGovernsAfterburnerFlow),
             ("readiness reports disabled mod", ReadinessReportsDisabledMod),
-            ("readiness excludes absolute throttle", ReadinessExcludesAbsoluteThrottle),
+            ("readiness excludes analog throttle", ReadinessExcludesAnalogThrottle),
+            ("readiness waits for the first throttle key", ReadinessWaitsForFirstThrottleKey),
             ("readiness waits for patch installation", ReadinessWaitsForPatchInstallation),
             ("readiness reports observer failure", ReadinessReportsObserverFailure),
             ("readiness reports one failed detent", ReadinessReportsOneFailedDetent),
@@ -982,11 +983,18 @@ internal static class Program
         Equal("OFF - Mod disabled", result.DisplayText);
     }
 
-    private static void ReadinessExcludesAbsoluteThrottle()
+    private static void ReadinessWaitsForFirstThrottleKey()
     {
-        var result = Readiness(relativeThrottleMode: false);
+        var result = Readiness(throttleDevice: ThrottleInputDevice.Unknown);
+        Equal(RuntimeReadinessState.Waiting, result.State);
+        Equal("WAITING - Press a throttle key", result.DisplayText);
+    }
+
+    private static void ReadinessExcludesAnalogThrottle()
+    {
+        var result = Readiness(throttleDevice: ThrottleInputDevice.Analog);
         Equal(RuntimeReadinessState.NotApplicable, result.State);
-        Equal("NOT APPLICABLE - Enable Use Throttle Relative Axis", result.DisplayText);
+        Equal("NOT APPLICABLE - Analog throttle axis not supported", result.DisplayText);
     }
 
     private static void ReadinessWaitsForPatchInstallation()
@@ -1033,14 +1041,14 @@ internal static class Program
 
     private static void ReadinessNamesUnsupportedBeforeThrottleMode()
     {
-        var result = Readiness(airframeSupported: false, relativeThrottleMode: false);
+        var result = Readiness(airframeSupported: false, throttleDevice: ThrottleInputDevice.Analog);
         Equal(RuntimeReadinessState.Unsupported, result.State);
         Equal("UNSUPPORTED - Not in preset", result.DisplayText);
     }
 
     private static void ReadinessNamesCollectiveBeforeThrottleMode()
     {
-        var result = Readiness(isCollective: true, relativeThrottleMode: false);
+        var result = Readiness(isCollective: true, throttleDevice: ThrottleInputDevice.Analog);
         Equal(RuntimeReadinessState.NotApplicable, result.State);
         Equal("NOT APPLICABLE - Collective aircraft", result.DisplayText);
     }
@@ -1530,7 +1538,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            throttleDevice: ThrottleInputDevice.Digital,
             aircraftCapabilitiesKnown: false,
             hasAirbrake: false,
             hasAfterburner: false,
@@ -1550,7 +1558,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            throttleDevice: ThrottleInputDevice.Digital,
             aircraftCapabilitiesKnown: true,
             hasAirbrake: true,
             hasAfterburner: false,
@@ -1570,7 +1578,7 @@ internal static class Program
             hasPlayerAircraft: true,
             airframeSupported: true,
             isCollective: false,
-            relativeThrottleMode: true,
+            throttleDevice: ThrottleInputDevice.Digital,
             aircraftCapabilitiesKnown: false,
             hasAirbrake: false,
             hasAfterburner: false,
@@ -1835,7 +1843,7 @@ internal static class Program
         bool hasPlayerAircraft = true,
         bool airframeSupported = true,
         bool isCollective = false,
-        bool relativeThrottleMode = true,
+        ThrottleInputDevice throttleDevice = ThrottleInputDevice.Digital,
         bool aircraftCapabilitiesKnown = true,
         bool hasAirbrake = true,
         bool hasAfterburner = true) =>
@@ -1850,7 +1858,7 @@ internal static class Program
             hasPlayerAircraft,
             airframeSupported,
             isCollective,
-            relativeThrottleMode,
+            throttleDevice,
             aircraftCapabilitiesKnown,
             hasAirbrake,
             hasAfterburner));

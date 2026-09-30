@@ -2,7 +2,7 @@
 
 ## Scope
 
-Nuclear Option Detents is a client-side BepInEx 5 prototype for relative-throttle
+Nuclear Option Detents is a client-side BepInEx 5 prototype for keyboard-throttle
 detents. Keep the runtime local: it may gate the local pilot's existing
 airbrake and afterburner decisions, but it must not patch remote aircraft,
 weapons, network transport, or server logic.
@@ -30,8 +30,8 @@ add infrastructure to make a prototype look production-ready.
 ## Invariants
 
 - Unknown/new aircraft remain vanilla unless the player enables an exact-ID
-  custom profile. Collective controls, absolute/HOTAS mode, and absent systems
-  always remain vanilla.
+  custom profile. Collective controls, analog throttle axes (HOTAS), and absent
+  systems always remain vanilla.
 - Built-in presets are keyed by `UnitDefinition.jsonKey`; runtime discovery
   cannot add one automatically. A player may opt an unknown aircraft into an
   exact-ID custom profile, which still requires matching local components.

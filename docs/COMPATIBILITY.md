@@ -38,7 +38,7 @@ updates. After a game update, recheck these targets and run the mod.
 - JetNozzle afterburners field: `JetNozzle/Afterburner[] JetNozzle::afterburners`
 - Afterburner throttle range fields: `System.Single JetNozzle/Afterburner::throttleStart`, `System.Single JetNozzle/Afterburner::throttleEnd`
 - GameManager flight-controls field: `System.Boolean GameManager::flightControlsEnabled`
-- PlayerSettings relative-throttle field: `System.Boolean PlayerSettings::throttleUseRelative`
+- Throttle input device: `IList<InputActionSourceData> Rewired.Player::GetCurrentInputSources(string)` -> `controllerType`, `actionElementMap.elementType`
 - PlayerSettings invert-collective field: `System.Boolean PlayerSettings::invertCollective`
 - PlayerSettings throttle-negative field: `System.Boolean PlayerSettings::throttleUseNegative`
 - ControlSurface max-split field: `System.Single ControlSurface::maxSplit`

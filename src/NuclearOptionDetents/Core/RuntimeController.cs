@@ -62,7 +62,7 @@ internal static class RuntimeController
     private static bool _idleGateActive;
     private static bool _afterburnerGateActive;
     private static bool _foreignThrottleBypassActive;
-    private static bool? _lastRelativeThrottleMode;
+    private static ThrottleInputDevice _throttleDevice;
     private static readonly HashSet<string> ReportedFailures = new();
 
     /// <summary>Called once at plugin load; the reset leaves the runtime in the same state as leaving an aircraft.</summary>
@@ -96,7 +96,7 @@ internal static class RuntimeController
                     hasPlayerAircraft,
                     _activePreset is not null || _customDryDetentFractions.Length > 0,
                     _localCollective,
-                    PlayerSettings.throttleUseRelative,
+                    _throttleDevice,
                     _aircraftCapabilitiesKnown,
                     _hasAirbrake,
                     _hasAfterburner,
@@ -259,13 +259,12 @@ internal static class RuntimeController
                 RefreshApplicableCapabilities();
                 RebuildRuntime(settings);
                 _runtime.ObserveContext(aircraft, inputs);
-                _lastRelativeThrottleMode = PlayerSettings.throttleUseRelative;
                 if (settings.DebugLogging && _log is not null)
                 {
                     _log.LogInfo(
                         $"Detents attached to {_airframeName} ({_airframeId}): " +
                         $"allowlisted={_activePreset is not null}, airbrake={_hasAirbrake}, afterburner={_hasAfterburner}, " +
-                        $"customDetents={_customDryDetentFractions.Length}, throttleUseRelative={_lastRelativeThrottleMode}, " +
+                        $"customDetents={_customDryDetentFractions.Length}, throttleDevice={_throttleDevice}, " +
                         $"throttleUseNegative={PlayerSettings.throttleUseNegative}");
                 }
             }
@@ -289,14 +288,14 @@ internal static class RuntimeController
             var rawThrottle = player.GetAxisRaw("Throttle");
             var axisModifierHeld = player.GetButton("Axis Modifier");
             var requestedThrottle = inputs.throttle;
-            var relativeThrottle = PlayerSettings.throttleUseRelative;
-            if (_lastRelativeThrottleMode is bool previousRelativeThrottle &&
-                previousRelativeThrottle != relativeThrottle &&
-                settings.DebugLogging && _log is not null)
+            var throttleDevice = LatchThrottleDevice(player);
+            if (throttleDevice != _throttleDevice && settings.DebugLogging && _log is not null)
             {
-                _log.LogInfo($"Throttle setting changed: throttleUseRelative={relativeThrottle}");
+                _log.LogInfo($"Throttle input device changed: {throttleDevice}");
             }
-            _lastRelativeThrottleMode = relativeThrottle;
+            _throttleDevice = throttleDevice;
+            // Only key and button input ramps the way the detents expect; analog axes stay vanilla.
+            var relativeThrottle = throttleDevice == ThrottleInputDevice.Digital;
             var reverseDirection = collective && PlayerSettings.invertCollective;
             var controlsEnabled = GameManager.flightControlsEnabled;
             var paused = Time.timeScale <= 0f;
@@ -516,7 +515,7 @@ internal static class RuntimeController
         _effectiveSimulatedThrottle = 0;
         _lastObservedFrame = -1;
         _foreignThrottleBypassActive = false;
-        _lastRelativeThrottleMode = null;
+        _throttleDevice = ThrottleInputDevice.Unknown;
         if (shouldLog)
         {
             _log!.LogInfo($"Detent state reset: {reason}");
@@ -838,6 +837,43 @@ internal static class RuntimeController
             AfterburnerSamples,
             out _liveAfterburnerStart,
             out _liveAfterburnerEnd);
+    }
+
+    /// <summary>Keeps the last device on frames without Throttle input, so releasing a key does not drop a hold; a failure reads as Unknown, which stays vanilla.</summary>
+    private static ThrottleInputDevice LatchThrottleDevice(Player player)
+    {
+        try
+        {
+            return ActiveThrottleDevice(player) ?? _throttleDevice;
+        }
+        catch (Exception exception)
+        {
+            LogFailureOnce("Throttle device detection", exception);
+            return ThrottleInputDevice.Unknown;
+        }
+    }
+
+    // Rewired returns a cached per-frame list, and indexing it avoids an enumerator allocation.
+    // Any axis source wins over a key held at the same time, because pinning would fight a lever.
+    private static ThrottleInputDevice? ActiveThrottleDevice(Player player)
+    {
+        var sources = player.GetCurrentInputSources("Throttle");
+        if (sources is null || sources.Count == 0)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < sources.Count; index++)
+        {
+            var source = sources[index];
+            if (source.controllerType != ControllerType.Keyboard &&
+                source.actionElementMap?.elementType != ControllerElementType.Button)
+            {
+                return ThrottleInputDevice.Analog;
+            }
+        }
+
+        return ThrottleInputDevice.Digital;
     }
 
     private static bool IsLiveUnityObject(object? value) =>
