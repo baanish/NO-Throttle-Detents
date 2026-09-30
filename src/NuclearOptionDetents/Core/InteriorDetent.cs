@@ -164,11 +164,7 @@ internal sealed class InteriorDetentRuntime
 
             var delta = input.SimulationTime - _lastSimulationTime;
             _lastSimulationTime = input.SimulationTime;
-            if (delta > DetentTiming.MaximumObservationGapSeconds + 0.000001)
-            {
-                _elapsedSeconds = 0;
-            }
-            else if (delta > 0)
+            if (delta > 0)
             {
                 _elapsedSeconds += delta;
             }
