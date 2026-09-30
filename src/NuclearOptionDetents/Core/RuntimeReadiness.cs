@@ -25,7 +25,7 @@ internal readonly struct RuntimeReadinessInput
         bool hasPlayerAircraft,
         bool airframeSupported,
         bool isCollective,
-        bool analogThrottle,
+        ThrottleInputDevice throttleDevice,
         bool aircraftCapabilitiesKnown,
         bool hasAirbrake,
         bool hasAfterburner,
@@ -34,12 +34,12 @@ internal readonly struct RuntimeReadinessInput
     {
         (MasterEnabled, IdleEnabled, AfterburnerEnabled, PatchStatusKnown,
             ThrottleObserverActive, IdleGateActive, AfterburnerGateActive,
-            HasPlayerAircraft, AirframeSupported, IsCollective, AnalogThrottle,
+            HasPlayerAircraft, AirframeSupported, IsCollective, ThrottleDevice,
             AircraftCapabilitiesKnown, HasAirbrake, HasAfterburner, InteriorDetentsEnabled,
             InteriorDetentsConfigured) =
             (masterEnabled, idleEnabled, afterburnerEnabled, patchStatusKnown,
                 throttleObserverActive, idleGateActive, afterburnerGateActive,
-                hasPlayerAircraft, airframeSupported, isCollective, analogThrottle,
+                hasPlayerAircraft, airframeSupported, isCollective, throttleDevice,
                 aircraftCapabilitiesKnown, hasAirbrake, hasAfterburner, interiorDetentsEnabled,
                 interiorDetentsConfigured);
     }
@@ -54,7 +54,7 @@ internal readonly struct RuntimeReadinessInput
     public bool HasPlayerAircraft { get; }
     public bool AirframeSupported { get; }
     public bool IsCollective { get; }
-    public bool AnalogThrottle { get; }
+    public ThrottleInputDevice ThrottleDevice { get; }
     public bool AircraftCapabilitiesKnown { get; }
     public bool HasAirbrake { get; }
     public bool HasAfterburner { get; }
@@ -124,9 +124,15 @@ internal static class RuntimeReadinessPolicy
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Collective aircraft");
         }
 
-        if (input.AnalogThrottle)
+        if (input.ThrottleDevice == ThrottleInputDevice.Analog)
         {
             return Result(RuntimeReadinessState.NotApplicable, "NOT APPLICABLE - Analog throttle axis not supported");
+        }
+
+        // Detents engage on the first throttle key or button press; until then, or if detection fails, they are off.
+        if (input.ThrottleDevice == ThrottleInputDevice.Unknown)
+        {
+            return Result(RuntimeReadinessState.Waiting, "WAITING - Press a throttle key");
         }
 
         if (input.InteriorDetentsConfigured && !input.InteriorDetentsEnabled)

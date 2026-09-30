@@ -13,6 +13,7 @@
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleCommand.cs" Link="Core\ThrottleCommand.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleBoundaryHold.cs" Link="Core\ThrottleBoundaryHold.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\RuntimeReadiness.cs" Link="Core\RuntimeReadiness.cs" />
+    <Compile Include="..\..\src\NuclearOptionDetents\Core\ThrottleInputDevice.cs" Link="Core\ThrottleInputDevice.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\AirframePreset.cs" Link="Core\AirframePreset.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\CustomAirframeConfig.cs" Link="Core\CustomAirframeConfig.cs" />
     <Compile Include="..\..\src\NuclearOptionDetents\Core\DetectedAircraftCatalog.cs" Link="Core\DetectedAircraftCatalog.cs" />

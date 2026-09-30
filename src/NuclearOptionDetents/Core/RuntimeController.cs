@@ -96,7 +96,7 @@ internal static class RuntimeController
                     hasPlayerAircraft,
                     _activePreset is not null || _customDryDetentFractions.Length > 0,
                     _localCollective,
-                    _throttleDevice == ThrottleInputDevice.Analog,
+                    _throttleDevice,
                     _aircraftCapabilitiesKnown,
                     _hasAirbrake,
                     _hasAfterburner,
