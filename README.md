@@ -102,6 +102,8 @@ BepInEx creates the file on first launch if the package did not include it.
 
 While an analog axis drives the throttle, the mod's `RuntimeStatus` line in
 the F1 menu reads `NOT APPLICABLE - Analog throttle axis not supported`.
+Detents engage on the first throttle key press of a flight; until then it
+reads `WAITING - Press a throttle key`.
 
 Auto Hover bypasses the detents and the sensitivity multiplier while it is on.
 
