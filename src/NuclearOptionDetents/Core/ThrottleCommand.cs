@@ -11,14 +11,20 @@ public enum ThrottleCommand
 /// <summary>Converts Rewired's raw Increase/Decrease input into detent intent.</summary>
 public static class ThrottleCommands
 {
-    public static ThrottleCommand FromRawAxis(double rawAxis, double threshold, bool reverseDirection = false)
+    /// <summary>
+    /// The game's own throttle input deadzone, compared as a float like the game does. Detents only run for
+    /// keys and buttons, which read 0 or +-1, so no separate command threshold is needed.
+    /// </summary>
+    public const float VanillaInputDeadzone = 0.1f;
+
+    public static ThrottleCommand FromRawAxis(double rawAxis, bool reverseDirection = false)
     {
-        if (rawAxis >= threshold)
+        if (rawAxis > VanillaInputDeadzone)
         {
             return reverseDirection ? ThrottleCommand.Decrease : ThrottleCommand.Increase;
         }
 
-        if (rawAxis <= -threshold)
+        if (rawAxis < -VanillaInputDeadzone)
         {
             return reverseDirection ? ThrottleCommand.Increase : ThrottleCommand.Decrease;
         }

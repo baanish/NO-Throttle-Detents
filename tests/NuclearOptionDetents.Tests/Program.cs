@@ -647,9 +647,9 @@ internal static class Program
 
     private static void RawButtonReleaseBecomesNeutral()
     {
-        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(1, 0.5));
-        Equal(ThrottleCommand.Neutral, ThrottleCommands.FromRawAxis(0, 0.5));
-        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(-1, 0.5));
+        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(1));
+        Equal(ThrottleCommand.Neutral, ThrottleCommands.FromRawAxis(0));
+        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(-1));
     }
 
     private static void AbsoluteThrottleBypassesDetentRuntime()
@@ -712,10 +712,10 @@ internal static class Program
 
     private static void CollectiveInversionReversesCommandDirection()
     {
-        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(1, 0.5));
-        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(-1, 0.5));
-        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(1, 0.5, reverseDirection: true));
-        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(-1, 0.5, reverseDirection: true));
+        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(1));
+        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(-1));
+        Equal(ThrottleCommand.Decrease, ThrottleCommands.FromRawAxis(1, reverseDirection: true));
+        Equal(ThrottleCommand.Increase, ThrottleCommands.FromRawAxis(-1, reverseDirection: true));
     }
 
     private static void AirbrakeInhibitedWhileHolding()

@@ -115,7 +115,6 @@ DetectedAircraft =
 SelectedAircraftId =
 
 [Advanced]
-CommandThreshold = 0.5
 EndpointEpsilon = 0.001
 ResetHysteresis = 0.02
 ```
@@ -125,8 +124,6 @@ unlocks on the first qualifying endpoint update. The HUD indicator appears
 below the throttle gauge only while a detent is blocking movement. `Multiplier`
 scales keyboard throttle movement from 0.25x to 4x on aircraft with a supported
 detent; 1x preserves the game rate. Other aircraft keep vanilla sensitivity.
-`CommandThreshold` is the
-raw input magnitude required to hold; `1.0` requires full-scale input.
 `EndpointEpsilon` tolerates float noise; `ResetHysteresis` controls how far the
 throttle must move away before an unlocked detent relocks and is always at
 least the endpoint tolerance. `DebugLogging` is off by default and is useful
