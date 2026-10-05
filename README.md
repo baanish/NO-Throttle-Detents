@@ -125,7 +125,7 @@ networking, weapons, or other players' aircraft.
 
 ## Testing status
 
-This is a v0.4 prototype. Each release in [CHANGELOG.md](CHANGELOG.md) records
+This is a prototype. Each release in [CHANGELOG.md](CHANGELOG.md) records
 its manual checks and the game build they ran on. The latest checks were on Nuclear
 Option 0.34.2, Steam build 24724372. A game update can break the throttle
 patch. If it does, the mod logs the failure and leaves the throttle vanilla.
