@@ -1091,6 +1091,7 @@ internal static class Program
     {
         var expected = new (string Id, string Name, bool Collective, AirbrakePath AirbrakePath, bool Afterburner, float? IdleBoundary, int? Nozzles, float? AbStart, float? AbEnd)[]
         {
+            ("1509_palafighter1", "KR-33 Agni", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
             ("AttackHelo1", "SAH-46 Chicane", true, AirbrakePath.None, false, null, null, null, null),
             ("Aryx_CargoPlane1", "MC-260 Chimera", false, AirbrakePath.Split, false, 0f, null, null, null),
             ("Aryx_F16M_KingViper", "F-16M King Viper", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
@@ -1144,6 +1145,7 @@ internal static class Program
             "Aryx_CargoPlane1", "Aryx_F16M_KingViper", "Aryx_Interceptor1",
             "Aryx_LightFighter1", "Aryx_PropAttacker1", "P_Trisurface1",
             "Aryx_F22E_StrikeRaptor",
+            "1509_palafighter1",
         };
         foreach (var id in detentedIds)
         {
@@ -1679,6 +1681,7 @@ internal static class Program
     {
         var expectedCounts = new (string Id, int Count, float Start, float Boundary)[]
         {
+            ("1509_palafighter1", 1, 0.9f, 0.9f),
             ("Aryx_F16M_KingViper", 1, 0.9f, 0.9f),
             ("Aryx_F22E_StrikeRaptor", 2, 0.95f, 0.9f),
             ("Aryx_Interceptor1", 2, 0.9f, 0.9f),

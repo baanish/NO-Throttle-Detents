@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- Adds a preset for Phoenix1509's KR-33 Agni 1.0.1, with a component airbrake and one afterburner nozzle at `0.9..1.0`.
+- An in-game framework check used the throttle action through Rewired to confirm both stops and continued-input release with 2,000 ms holds, then release with the default 200 ms holds, in an isolated Detents and Blueprinter profile.
+- A user play-test of the KR-33 Agni 1.0.1 with Detents 0.5.1 on Nuclear Option 0.34.2, Steam build 24724372, reported no problems. The live log confirmed both detent capabilities. Multiplayer behavior remains unverified.
+
 ## 0.5.0
 
 - Runs detents for keyboard and button throttles with the game's `Use Throttle Relative Axis` setting on or off. The game ships that setting off, and players could not find it.

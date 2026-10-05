@@ -1,8 +1,8 @@
 # Airframe presets
 
 `AirframePresetCatalog` in `src/NuclearOptionDetents/Core/AirframePreset.cs`
-holds 20 presets keyed by `UnitDefinition.jsonKey`, matched without regard to
-case. 15 of them are non-collective with an airbrake or afterburner and get
+holds 21 presets keyed by `UnitDefinition.jsonKey`, matched without regard to
+case. 16 of them are non-collective with an airbrake or afterburner and get
 detents. The 3 collective aircraft and the 2 with neither system stay vanilla.
 An ID with no preset stays vanilla unless the player enables a custom profile
 for it.
@@ -54,11 +54,19 @@ FS-20, KR-67, and AB-4. Live QA in 0.3.0 covered all 13 on Steam build
 | Aryx FS-41 Eclipse | 1.1.6 | `Aryx_Interceptor1` | FS-41 Eclipse | Airbrake component | yes (`0.900000..1.000000`, 2 nozzles) |
 | Aryx OA-27 Cavalier | 1.0.0 | `Aryx_PropAttacker1` | OA-27 Cavalier | split | no |
 | FS-3 Ternion | 1.0.1 | `P_Trisurface1` | FS-3 Ternion | split | yes (`0.900000..1.000000`, 2 nozzles) |
+| Phoenix1509 KR-33 | 1.0.1 | `1509_palafighter1` | KR-33 Agni | Airbrake component | yes (`0.900000..1.000000`, 1 nozzle) |
 
 These values come from inspecting the serialized `AircraftDefinition.jsonKey`,
 `Airbrake`, positive `ControlSurface.maxSplit`, and `JetNozzle.afterburners`
 data in the installed Blueprinter aircraft bundles. The mod has no dependency
 on Blueprinter or the aircraft mods.
+
+The KR-33 1.0.1 capture used UnityPy 1.21.3 to inspect
+`1509_PalaFighter1_1.0.1.nobp` (SHA-256
+`D4BEF8D30FB0BB153DFB18C3D13F97237F0BA66E14F1DF39C6EEB8A155808092`).
+It has one owned `Airbrake`, no positive `ControlSurface.maxSplit`, one
+`JetNozzle` stage at `0.8999999761581421..1.0`, and `takeoffDistance=600`,
+which selects non-collective controls in the inspected game.
 
 Manual checks in [CHANGELOG.md](../CHANGELOG.md), all on Steam build 24724372:
 0.4.0 loaded the MC-260, F-16M, F-99, FS-41, OA-27, and FS-3 and confirmed
@@ -66,6 +74,8 @@ their expected components in the live log. The OA-27 held a custom 67%
 detent, and an MC-260 ground roll confirmed that its thrust reverser still
 works. The reverser stays under the add-on's own Brake-plus-throttle controls,
 and this mod does not patch it. 0.4.3 flight-checked the F-22E MIL stop.
+0.5.1 play-tested the KR-33; its live log confirmed the component airbrake
+and matching afterburner nozzle.
 
 ### F-22E stops at MIL, not at its nozzle start
 
