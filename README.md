@@ -51,8 +51,8 @@ which you install separately. The mod works without it.
 
 ## Supported aircraft
 
-The mod recognizes 20 aircraft and puts a detent on 15 of them: base-game
-aircraft plus optional Aryx and Ternion add-on aircraft.
+The mod recognizes 21 aircraft and puts a detent on 16 of them: base-game
+aircraft plus optional Aryx, Ternion, and KR-33 add-on aircraft.
 [docs/AIRFRAME-PRESETS.md](docs/AIRFRAME-PRESETS.md) lists each one and
 which detents it gets. An aircraft the mod does not recognize stays vanilla
 unless you turn on a custom profile for it.

@@ -194,6 +194,7 @@ internal static class AirframePresetCatalog
 {
     private static readonly AirframePreset[] Presets =
     {
+        new("1509_palafighter1", "KR-33 Agni", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
         new("AttackHelo1", "SAH-46 Chicane", true, AirbrakePath.None, false, null, null, null, null),
         new("Aryx_CargoPlane1", "MC-260 Chimera", false, AirbrakePath.Split, false, 0f, null, null, null),
         new("Aryx_F16M_KingViper", "F-16M King Viper", false, AirbrakePath.Component, true, 0f, 1, 0.9f, 1f),
